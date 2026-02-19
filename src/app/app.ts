@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import Highcharts from 'highcharts';
-import { ChartPersistenceService, type ChartPostPayload } from './services/chart-persistence.service';
+import { ChartPersistenceService, type ChartPostPayload, type DashboardGetResponse, type DashboardWidgetPayload } from './services/chart-persistence.service';
 
 interface Field {
   id: string;
@@ -66,664 +66,24 @@ interface PageFilterItem {
   value: string;
 }
 
+interface DashboardSavePayload {
+  id: string;
+  dashboardName: string;
+  page_filters: PageFilterItem[];
+  datasets_used: string[];
+  widgetlist: any[];
+  createdBy: string;
+  createdDate: string;
+  updateBy: string;
+  UpdateDate: string;
+}
+
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, FormsModule, MatIconModule],
-  template: `
-    <div class="app-container" (mousemove)="onGlobalMouseMove($event)" (mouseup)="onGlobalMouseUp()" (click)="closeAddMenu()">
-      <!-- Header -->
-      <header class="main-header">
-        <div class="header-left">
-          <h1>Sales Metrics</h1>
-        </div>
-        <div class="header-right">
-          <div style="position: relative; display: flex; gap: 8px; align-items: center;" (click)="$event.stopPropagation()">
-            <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 4px;" (click)="toggleAddMenu($event)">
-              Add
-              <mat-icon style="font-size: 18px; width: 18px; height: 18px;">arrow_drop_down</mat-icon>
-            </button>
-            @if (addMenuOpen()) {
-              <div style="position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 170px; overflow: hidden; z-index: 180;">
-                <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer;" (click)="addFromMenu('chart', $event)">Create Widget</button>
-                <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer;" (click)="addFromMenu('text', $event)">Create Text</button>
-                <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer; color: #b91c1c;" (click)="resetDashboard($event)">Create Dashboard</button>
-              </div>
-            }
-          </div>
-          <button class="btn-icon" (click)="toggleSidebar()">
-            <mat-icon>{{ sidebarOpened() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-          </button>
-        </div>
-      </header>
-
-      <div class="main-layout">
-        <!-- Canvas -->
-        <main class="canvas-area" id="canvas-container">
-          <section style="position: sticky; top: 0; z-index: 40; background: #e5e7eb; border: 1px solid #d1d5db; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: end; gap: 10px; flex-wrap: wrap;">
-              <label style="display: flex; flex-direction: column; gap: 4px; min-width: 220px;">
-                <span style="font-size: 12px; color: #6b7280;">Auto date filter</span>
-                <div style="position: relative;">
-                  <mat-icon style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; width: 16px; height: 16px; color: #6b7280;">calendar_today</mat-icon>
-                  <select class="form-input" style="padding-left: 34px;" [(ngModel)]="topFilterDateRange" (ngModelChange)="onTopDateFilterChange()">
-                    @for (item of topFilterDateRanges; track item) {
-                      <option [value]="item">{{ item }}</option>
-                    }
-                  </select>
-                </div>
-              </label>
-              <div style="position: relative;" (click)="$event.stopPropagation()">
-                <button class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:6px;" (click)="togglePageFilterPicker($event)">
-                  + Add Page Filter
-                </button>
-                @if (pageFilterPickerOpen()) {
-                  <div style="position:absolute;right:0;top:calc(100% + 6px);width:260px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:170;">
-                    <div style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;font-weight:700;">Common Columns</div>
-                    <div style="max-height:220px;overflow:auto;padding:8px 10px;">
-                      @if (getCommonFilterColumns().length === 0) {
-                        <div style="font-size:12px;color:#9ca3af;padding:8px;">No common columns found</div>
-                      } @else {
-                        @for (col of getCommonFilterColumns(); track col) {
-                          <label style="display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:13px;color:#334155;cursor:pointer;">
-                            <input type="checkbox" [checked]="isPendingPageFilterSelected(col)" (change)="togglePendingPageFilter(col)">
-                            <span>{{ col }}</span>
-                          </label>
-                        }
-                      }
-                    </div>
-                    <div style="display:flex;justify-content:flex-end;gap:8px;padding:10px;border-top:1px solid #e5e7eb;">
-                      <button class="btn btn-secondary" style="padding:6px 10px;" (click)="clearPageFilterPickerSelection()">Clear</button>
-                      <button class="btn btn-primary" style="padding:6px 10px;" (click)="applyPageFilterSelection($event)">Done</button>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-
-            @if (pageFilters().length > 0) {
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
-                @for (pf of pageFilters(); track pf.column) {
-                  <div style="display:flex;flex-direction:column;gap:4px;">
-                    <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                      <span style="font-size:12px;color:#6b7280;">{{ pf.column }}</span>
-                      <button type="button" style="border:0;background:transparent;cursor:pointer;color:#94a3b8;line-height:1;" (click)="removePageFilter(pf.column, $event)">×</button>
-                    </label>
-                    <select class="form-input" [ngModel]="pf.value" (ngModelChange)="onPageFilterValueChange(pf.column, $event)">
-                      @for (opt of getFilterOptionsForColumn(pf.column); track opt) {
-                        <option [value]="opt">{{ opt }}</option>
-                      }
-                    </select>
-                    @if (showIneligibleFilterWarning(pf.column)) {
-                      <div style="font-size:11px;color:#b45309;">Few Charts are not eligible for this filter item.</div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </section>
-          <div class="grid-container" id="grid-canvas">
-            @for (el of elements(); track el.id) {
-              <div [id]="el.id"
-                   class="widget-card"
-                   [class.selected]="selectedId() === el.id"
-                   [class.text-widget]="el.type === 'text'"
-                   [style.grid-column]="'span ' + el.width"
-                   [style.grid-row]="'span ' + el.height"
-                   [style.transform]="getTransform(el)"
-                   (mousedown)="selectElement(el.id)">
-
-                <!-- Chart Header with Edit Icon -->
-                @if (el.type === 'chart') {
-                  <div class="widget-header drag-handle" (mousedown)="startDrag($event, el)">
-                    <div class="header-main">
-                      <span class="widget-title">{{ el.title }}</span>
-                    </div>
-                    <div class="widget-actions">
-                      <button class="icon-action-btn" (click)="openProperties(); $event.stopPropagation()">
-                        <mat-icon>edit</mat-icon>
-                      </button>
-                      <button class="icon-action-btn" (click)="removeElement(el.id); $event.stopPropagation()">
-                        <mat-icon>close</mat-icon>
-                      </button>
-                    </div>
-                  </div>
-                } @else {
-                  <!-- Text Drag Handle -->
-                  <div class="text-drag-handle drag-handle" (mousedown)="startDrag($event, el)">
-                     <span class="edit-icon-text">::</span>
-                  </div>
-                }
-
-                <div class="widget-body">
-                  @if (el.type === 'chart') {
-                    <div [id]="'chart-' + el.id" class="chart-box"></div>
-                  } @else {
-                    <div class="text-box" [style.font-size.px]="el.fontSize" [style.color]="el.color">
-                      {{ el.content }}
-                    </div>
-                  }
-                  <div class="resize-handle" (mousedown)="startResize($event, el)"></div>
-                </div>
-              </div>
-              @if (shouldRenderDrilldownAfter(el.id) && activeDrilldown(); as dd) {
-                <section class="canvas-drilldown-panel"
-                         [style.grid-row-end]="'span ' + getDrilldownPanelRowSpan(dd.rows.length)"
-                         [style.margin-bottom.px]="16">
-                  <div class="panel-top">
-                    <div>
-                      <div class="drilldown-title">Drilldown: {{ dd.pointLabel }}</div>
-                      <div class="drilldown-subtitle">{{ dd.agg }} of {{ dd.measureLabel }} by {{ dd.dimensionLabel }}</div>
-                    </div>
-                    <button class="close-drilldown-btn" (click)="closeDrilldown()">Close</button>
-                  </div>
-                  <div class="drilldown-table-wrap">
-                    <table class="drilldown-table">
-                      <thead>
-                        <tr>
-                          <th>{{ dd.dimensionLabel }} Detail</th>
-                          <th>{{ dd.agg }} {{ dd.measureLabel }}</th>
-                          <th>Contribution</th>
-                          <th>Status</th>
-                          <th>Owner</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (row of dd.rows; track $index) {
-                          <tr>
-                            <td>{{ row.detail }}</td>
-                            <td>{{ row.measureValue | number:'1.0-0' }}</td>
-                            <td>{{ row.contributionPct }}</td>
-                            <td>
-                              <span class="status-badge" [class.risk]="row.status === 'Risk'" [class.watch]="row.status === 'Watch'">
-                                {{ row.status }}
-                              </span>
-                            </td>
-                            <td>{{ row.owner }}</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              }
-            }
-          </div>
-        </main>
-
-        <!-- Sidebar -->
-        <aside class="sidebar" [class.open]="sidebarOpened()" style="position: relative; z-index: 140;">
-          <div class="sidebar-tabs">
-            <div class="tab" [class.active]="activeTab === 'PROPERTIES'" (click)="activeTab = 'PROPERTIES'">VISUALIZATIONS</div>
-            <div class="tab" [class.active]="activeTab === 'ADVANCED'" (click)="activeTab = 'ADVANCED'">ADVANCE OPTIONS</div>
-          </div>
-
-          <div class="sidebar-content">
-            @if (selectedElement(); as el) {
-
-              <!-- PROPERTIES TAB -->
-              @if (activeTab === 'PROPERTIES') {
-                <div class="config-container">
-                  <section class="config-section">
-                    <label>WIDGET NAME</label>
-                    <input type="text" [(ngModel)]="el.title" (ngModelChange)="updateTitle(el)" class="form-input" placeholder="Enter widget name...">
-                  </section>
-
-                  @if (el.type === 'chart') {
-                    <section class="config-section">
-                      <div class="vis-grid">
-                        @for (v of visTypes; track v.id) {
-                          <button class="vis-btn" [class.active]="el.visType === v.id" (click)="updateVisType(v.id)">
-                            @if (v.id === 'counter') {
-                              {{ v.icon }}
-                            } @else {
-                              <mat-icon>{{ v.icon }}</mat-icon>
-                            }
-                          </button>
-                        }
-                      </div>
-                      <div class="more-chart-row">
-                        <button type="button" class="more-chart-icon-btn" aria-label="More charts">
-                          <mat-icon>add_chart</mat-icon>
-                        </button>
-                        <select class="form-input select-input more-chart-select" (ngModelChange)="onMoreChartTypeSelect($event)" [ngModel]="''">
-                          <option value="">Select more chart type</option>
-                          @for (v of moreVisTypes; track v.id) {
-                            <option [value]="v.id">{{ v.name }}</option>
-                          }
-                        </select>
-                      </div>
-                    </section>
-
-                    <section class="config-section">
-                      <label>DATASET SELECTION</label>
-                      <select class="form-input select-input" [ngModel]="el.dataset" (ngModelChange)="onDatasetChange(el, $event)">
-                        @for (name of getDatasetNames(); track name) {
-                          <option [value]="name">{{ name }}</option>
-                        }
-                      </select>
-                    </section>
-
-                    <section class="config-section mapping-container">
-                      <label>FIELD MAPPING (X AXIS / Y AXIS / LEGEND)</label>
-                      <input class="form-input" type="text" placeholder="Search fields..." [ngModel]="getFieldSearch(el.id)" (ngModelChange)="setFieldSearch(el.id, $event)">
-
-                      <div class="mapping-child">
-                        <label>CATEGORY X AXIS</label>
-                        <select class="form-input select-input"
-                                [ngModel]="el.xAxis?.id || ''"
-                                (ngModelChange)="onDimensionSelect(el, $event, 'xAxis')">
-                          <option value="">Select category</option>
-                          @for (field of getFilteredDimensionFields(el); track field.id) {
-                            <option [value]="field.id">{{ field.name }}</option>
-                          }
-                        </select>
-                      </div>
-
-                      <div class="mapping-child">
-                        <div class="label-with-info">
-                          <label>VALUES Y AXIS</label>
-                          <button type="button" class="info-icon-btn" title="Use Ctrl button to select or deselect more than one item.">
-                            <mat-icon>info</mat-icon>
-                          </button>
-                        </div>
-                        <select class="form-input select-input"
-                                multiple
-                                [ngModel]="getSelectedMeasureIds(el)"
-                                (ngModelChange)="onMeasureSelect(el, $event)">
-                          @for (field of getFilteredMeasureFields(el); track field.id) {
-                            <option [value]="field.id">{{ field.name }}</option>
-                          }
-                        </select>
-                        <div class="field-hint">Hint: Use Ctrl button to select/deselect more than one item.</div>
-                        @for (metric of el.yAxes; track metric.id) {
-                          <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
-                            <input class="form-input" [value]="metric.name" readonly>
-                            <select class="form-input select-input"
-                                    [ngModel]="getYAgg(el, metric.id)"
-                                    (ngModelChange)="onMeasureAggChange(el, metric.id, $event)">
-                              <option value="Sum">Sum</option>
-                              <option value="Avg">Avg</option>
-                              <option value="Min">Min</option>
-                              <option value="Max">Max</option>
-                            </select>
-                            <button type="button" class="btn-icon" (click)="removeMeasure(el, metric.id)">×</button>
-                          </div>
-                        }
-                        @if (el.yAxes.length < 2) {
-                          <button type="button" class="btn-icon" style="margin-top:6px;" (click)="addMetric(el)">+ Add metric</button>
-                        }
-                      </div>
-
-                      <div class="mapping-child">
-                        <label>LEGEND</label>
-                        <select class="form-input select-input"
-                                [ngModel]="el.legend?.id || ''"
-                                (ngModelChange)="onDimensionSelect(el, $event, 'legend')">
-                          <option value="">Select legend</option>
-                          @for (field of getFilteredDimensionFields(el); track field.id) {
-                            <option [value]="field.id">{{ field.name }}</option>
-                          }
-                        </select>
-                      </div>
-                    </section>
-
-                    <section class="config-section">
-                      <label>DRILL DOWN</label>
-                      <select class="form-input select-input"
-                              [ngModel]="el.drillDownField?.id || ''"
-                              (ngModelChange)="onDimensionSelect(el, $event, 'drillDownField')">
-                        <option value="">Select drill down</option>
-                        @for (field of getDimensionFields(el); track field.id) {
-                          <option [value]="field.id">{{ field.name }}</option>
-                        }
-                      </select>
-                    </section>
-
-                    <section class="config-section">
-                      <label>COLUMNS</label>
-                      <select class="form-input select-input"
-                              [ngModel]="el.columnsField?.id || ''"
-                              (ngModelChange)="onDimensionSelect(el, $event, 'columnsField')">
-                        <option value="">Select columns</option>
-                        @for (field of getDimensionFields(el); track field.id) {
-                          <option [value]="field.id">{{ field.name }}</option>
-                        }
-                      </select>
-                    </section>
-                  } @else {
-                    <section class="config-section">
-                      <label>CONTENT</label>
-                      <textarea [(ngModel)]="el.content" class="form-input" rows="4"></textarea>
-                    </section>
-                    <div class="prop-row">
-                       <div class="prop-item">
-                         <label>Font Size</label>
-                         <input type="number" [(ngModel)]="el.fontSize" class="form-input">
-                       </div>
-                       <div class="prop-item">
-                         <label>Color</label>
-                         <input type="color" [(ngModel)]="el.color" class="color-input">
-                       </div>
-                    </div>
-                  }
-
-                  @if (el.type === 'chart') {
-                    <div class="widget-footer-actions" style="position: sticky; bottom: 0; background: #fff; padding-top: 10px; border-top: 1px solid #f1f5f9;">
-                      <button class="save-btn"
-                              [class.active]="isChartDirty(el)"
-                              [disabled]="!isChartDirty(el)"
-                              (click)="saveChart(el)">
-                        Save Chart
-                      </button>
-                      <button class="remove-btn half" (click)="removeElement(el.id)">Delete Widget</button>
-                    </div>
-                  } @else {
-                    <button class="remove-btn" style="position: sticky; bottom: 0; margin-top: 12px;" (click)="removeElement(el.id)">Delete Widget</button>
-                  }
-                </div>
-              }
-
-              <!-- DATA TAB -->
-              @if (activeTab === 'ADVANCED') {
-                <div class="data-explorer">
-                  @if (selectedElement()?.type === 'chart') {
-                    @if (selectedElement(); as selChart) {
-                      <section class="config-section">
-                        <label>LABEL POSITION</label>
-                        <div class="btn-group">
-                          @for (pos of ['Top', 'Btm', 'Lft', 'Rgt']; track pos) {
-                            <button [class.active]="selChart.labelPosition === pos" (click)="setLabelPosition(selChart, pos)">
-                              {{ pos }}
-                            </button>
-                          }
-                        </div>
-                      </section>
-
-                      <section class="config-section">
-                        <label>DATE COLUMN</label>
-                        <select class="form-input select-input"
-                                [ngModel]="selChart.dateColumn?.id || ''"
-                                (ngModelChange)="onDimensionSelect(selChart, $event, 'dateColumn')">
-                          <option value="">Select date column</option>
-                          @for (field of getDimensionFields(selChart); track field.id) {
-                            <option [value]="field.id">{{ field.name }}</option>
-                          }
-                        </select>
-                      </section>
-
-                      <section class="config-section">
-                        <label>CONDITION STRING</label>
-                        <textarea class="form-input" rows="4" [(ngModel)]="selChart.conditionString" (ngModelChange)="markChartDirty(selChart.id)" placeholder="Enter condition expression / notes..."></textarea>
-                      </section>
-
-                      <section class="config-section">
-                        <label>LIMIT (0-10)</label>
-                        <input class="form-input" type="number" min="0" max="10" [(ngModel)]="selChart.limit" (ngModelChange)="onLimitChange(selChart)">
-                      </section>
-
-                      <section class="config-section">
-                        <label>DATA LABEL OPTIONS</label>
-                        <select class="form-input select-input" [(ngModel)]="selChart.dataLabelOption" (ngModelChange)="onDataLabelOptionChange(selChart)">
-                          <option value="showValues">Show Values</option>
-                          <option value="percentage">Percentage</option>
-                          <option value="none">None</option>
-                        </select>
-                      </section>
-
-                      <section class="config-section">
-                        <label class="checkbox-row">
-                          <input type="checkbox" [(ngModel)]="selChart.enableCombination" (change)="onCombinationToggle(selChart)">
-                          Enable Combination Chart
-                        </label>
-                      </section>
-
-                      <section class="config-section">
-                        <label>SORT BY</label>
-                        <select class="form-input select-input"
-                                [ngModel]="selChart.sortBy?.id || ''"
-                                (ngModelChange)="onSortByChange(selChart, $event)">
-                          <option value="">Select sort field</option>
-                          @for (field of getAllFields(selChart); track field.id) {
-                            <option [value]="field.id">{{ field.name }}</option>
-                          }
-                        </select>
-                      </section>
-                    }
-                  } @else {
-                    <div class="empty-sidebar">
-                      <span>Tune</span>
-                      <p>Advance options are available for chart widgets only.</p>
-                    </div>
-                  }
-                </div>
-              }
-
-            } @else {
-              <div class="empty-sidebar">
-                <span>Select</span>
-                <p>Select a widget to edit properties</p>
-              </div>
-            }
-          </div>
-        </aside>
-      </div>
-    </div>
-  `,
-  // styles: [`
-  //   :host {
-  //     --primary: #2563eb;
-  //     --bg: #f1f5f9;
-  //     --card: #ffffff;
-  //     --text: #1e293b;
-  //     --border: #e2e8f0;
-  //     display: block;
-  //     height: 100vh;
-  //     font-family: 'Inter', system-ui, sans-serif;
-  //   }
-
-  //   .app-container { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); position: relative; }
-
-  //   .main-header {
-  //     height: 45px;
-  //     background: white;
-  //     border-bottom: 1px solid var(--border);
-  //     display: flex;
-  //     align-items: center;
-  //     justify-content: space-between;
-  //     padding: 0 24px;
-  //     z-index: 100;
-  //   }
-
-  //   .main-header h1 { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
-  //   .header-right { display: flex; gap: 12px; align-items: center; }
-
-  //   .btn { padding: 8px 16px; border-radius: 4px; font-weight: 600; font-size: 0.75rem; border: none; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
-  //   .btn-primary { background: #eab308; color: #451a03; }
-  //   .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-  //   .btn-icon { background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; border-radius: 4px; }
-
-  //   .main-layout { display: flex; flex: 1; overflow: hidden; }
-  //   .canvas-area { flex: 1; overflow: auto; padding: 20px; position: relative; }
-
-  //   .grid-container {
-  //     display: grid;
-  //     grid-template-columns: repeat(12, 1fr);
-  //     grid-auto-rows: 80px;
-  //     gap: 16px;
-  //     min-width: 1000px;
-  //   }
-
-  //   .widget-card {
-  //     background: var(--card);
-  //     border-radius: 4px;
-  //     border: 1px solid var(--border);
-  //     display: flex;
-  //     flex-direction: column;
-  //     position: relative;
-  //     transition: box-shadow 0.2s;
-  //   }
-
-  //   .widget-card.text-widget { background: transparent; border: 1px dashed transparent; box-shadow: none; }
-  //   .widget-card.text-widget.selected { border: 1px dashed var(--primary); }
-  //   .widget-card.selected { border: 2px solid var(--primary); z-index: 50; }
-
-  //   .widget-header {
-  //     padding: 8px 12px;
-  //     border-bottom: 1px solid var(--border);
-  //     display: flex;
-  //     justify-content: space-between;
-  //     align-items: center;
-  //     cursor: move;
-  //     background: #f8fafc;
-  //     user-select: none;
-  //   }
-
-  //   .header-main { display: flex; align-items: center; gap: 8px; }
-  //   .icon-action-btn { background: none; border: 0; cursor: pointer; color: #94a3b8; padding: 0; display: grid; place-items: center; }
-  //   .icon-action-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
-
-  //   .text-drag-handle {
-  //       position: absolute; top: -10px; left: 0; right: 0; height: 20px;
-  //       display: flex; justify-content: center; align-items: center;
-  //       cursor: move; opacity: 0; transition: opacity 0.2s;
-  //   }
-  //   .widget-card:hover .text-drag-handle { opacity: 1; }
-  //   .edit-icon-text { font-size: 18px; color: var(--primary); background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
-  //   .widget-title { font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
-  //   .widget-actions { display: flex; align-items: center; gap: 8px; }
-
-  //   .widget-body { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
-  //   .chart-box { width: 100%; height: 100%; min-height: 140px; }
-  //   .text-box { padding: 8px; height: 100%; overflow: hidden; }
-  //   .canvas-drilldown-panel {
-  //     grid-column: 1 / -1;
-  //     min-height: 220px;
-  //     border: 1px solid #dbeafe;
-  //     background: #f8fbff;
-  //     border-radius: 6px;
-  //     padding: 12px;
-  //     display: flex;
-  //     flex-direction: column;
-  //     gap: 10px;
-  //   }
-  //   .panel-top {
-  //     display: flex;
-  //     justify-content: space-between;
-  //     align-items: center;
-  //   }
-  //   .close-drilldown-btn {
-  //     border: 1px solid #bfdbfe;
-  //     background: white;
-  //     color: #1d4ed8;
-  //     padding: 6px 10px;
-  //     border-radius: 4px;
-  //     font-size: 0.72rem;
-  //     font-weight: 700;
-  //     cursor: pointer;
-  //     text-transform: uppercase;
-  //   }
-  //   .drilldown-title { font-size: 0.72rem; font-weight: 800; color: #334155; margin-bottom: 2px; text-transform: uppercase; }
-  //   .drilldown-subtitle { font-size: 0.68rem; color: #64748b; margin-bottom: 8px; }
-  //   .drilldown-table-wrap { background: white; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; }
-  //   .drilldown-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
-  //   .drilldown-table th {
-  //     background: #f1f5f9;
-  //     color: #64748b;
-  //     text-align: left;
-  //     padding: 8px;
-  //     border-bottom: 1px solid #e2e8f0;
-  //     font-weight: 700;
-  //   }
-  //   .drilldown-table td {
-  //     padding: 8px;
-  //     border-bottom: 1px solid #f1f5f9;
-  //     color: #334155;
-  //   }
-  //   .status-badge {
-  //     display: inline-block;
-  //     padding: 2px 6px;
-  //     border-radius: 999px;
-  //     background: #dcfce7;
-  //     color: #166534;
-  //     font-weight: 700;
-  //     font-size: 0.62rem;
-  //   }
-  //   .status-badge.watch { background: #fef9c3; color: #854d0e; }
-  //   .status-badge.risk { background: #fee2e2; color: #991b1b; }
-
-  //   .sidebar {
-  //     width: 0;
-  //     background: white;
-  //     border-left: 1px solid var(--border);
-  //     display: flex;
-  //     flex-direction: column;
-  //     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  //     overflow: hidden;
-  //   }
-  //   .sidebar.open { width: 360px; }
-
-  //   .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); background: #f8fafc; }
-  //   .tab { flex: 1; padding: 14px; text-align: center; font-size: 0.7rem; font-weight: 800; color: #64748b; border-bottom: 3px solid transparent; cursor: pointer; text-transform: uppercase; }
-  //   .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: white; }
-
-  //   .sidebar-content { padding: 20px; overflow-y: auto; flex: 1; background: #fff; }
-  //   .config-section { margin-bottom: 24px; }
-  //   .config-section label { display: block; font-size: 0.65rem; font-weight: 800; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; }
-
-  //   .form-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; outline: none; box-sizing: border-box; }
-  //   .select-input { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 10px auto; }
-
-  //   .vis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  //   .vis-btn { aspect-ratio: 1; border: 1px solid var(--border); border-radius: 4px; background: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  //   .vis-btn.active { border-color: var(--primary); background: #eff6ff; }
-
-  //   .btn-group { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 6px; }
-  //   .btn-group button { flex: 1; border: none; padding: 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: transparent; cursor: pointer; color: #64748b; }
-  //   .btn-group button.active { background: white; color: var(--primary); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-
-  //   .drop-zones-container { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-  //   .drop-panel { border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px; }
-  //   .drop-panel label { font-size: 0.6rem; font-weight: 800; color: #94a3b8; margin-bottom: 6px; display: block; }
-  //   .drop-zone-placeholder { border: 1px dashed #cbd5e1; min-height: 40px; border-radius: 4px; display: flex; align-items: center; padding: 0 12px; font-size: 0.75rem; color: #94a3b8; }
-  //   .drop-zone-placeholder.filled { border-style: solid; border-color: #3b82f6; background: #f0f7ff; color: #3b82f6; font-weight: 700; }
-
-  //   .value-chip { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-  //   .agg-select { background: #3b82f6; color: white; border: none; font-size: 10px; border-radius: 3px; padding: 2px 4px; font-weight: bold; outline: none; }
-
-  //   .field-row { display: flex; align-items: center; padding: 10px; border-radius: 4px; cursor: pointer; margin-bottom: 4px; background: #f8fafc; border: 1px solid transparent; }
-  //   .field-row:hover { border-color: #cbd5e1; }
-  //   .field-row.active { border-color: var(--primary); background: #eff6ff; }
-  //   .check-icon { margin-left: auto; font-size: 18px; color: var(--primary); }
-  //   .field-icon { width: 24px; font-size: 0.7rem; font-weight: 800; color: #94a3b8; margin-right: 8px; }
-  //   .field-icon.measure { color: var(--primary); }
-  //   .field-label { font-size: 0.8rem; color: #475569; }
-
-  //   .prop-row { display: flex; gap: 12px; margin-top: 12px; }
-  //   .prop-item { flex: 1; }
-  //   .color-input { width: 100%; height: 40px; border: 1px solid var(--border); padding: 2px; border-radius: 4px; }
-
-  //   .remove-btn { width: 100%; margin-top: 40px; padding: 10px; background: #fef2f2; border: 1px solid #fee2e2; color: #ef4444; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 700; }
-  //   .remove-btn.half { width: auto; margin-top: 0; flex: 1; }
-  //   .widget-footer-actions { display: flex; gap: 10px; margin-top: 28px; }
-  //   .save-btn {
-  //     flex: 1;
-  //     padding: 10px;
-  //     background: #dbeafe;
-  //     color: #64748b;
-  //     font-size: 0.75rem;
-  //     font-weight: 700;
-  //     cursor: not-allowed;
-  //   }
-  //   .save-btn.active {
-  //     background: #2563eb;
-  //     color: white;
-  //     cursor: pointer;
-  //   }
-  //   .resize-handle { position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; cursor: nwse-resize; z-index: 10; }
-  // `]
+  templateUrl: './app.html',
   styleUrls: ['./app.scss']
 })
 export class App implements OnInit {
@@ -741,6 +101,7 @@ export class App implements OnInit {
   pageFilterPickerOpen = signal(false);
   pendingPageFilterColumns = signal<Set<string>>(new Set());
   pageFilters = signal<PageFilterItem[]>([]);
+  editMode = signal(false);
   fieldSearchByChart: Record<string, string> = {};
   selectedMeasureIdsByChart: Record<string, string[]> = {};
   topFilterDateRange = 'This Week';
@@ -814,9 +175,7 @@ export class App implements OnInit {
 
   async ngOnInit() {
     await this.initializeLibraries();
-    if (this.elements().length === 0) {
-      this.addDefaultHighchartsDrilldownWidget();
-    }
+    this.loadDashboardOnInit();
   }
 
   async initializeLibraries() {
@@ -883,8 +242,103 @@ export class App implements OnInit {
     this.scheduleChartRenderById(id);
   }
 
+  resolveFieldByName(
+    dataset: 'Invoices' | 'Sales' | 'Transactions',
+    fieldName: string | null,
+    expectedType?: 'dimension' | 'measure'
+  ): Field | null {
+    if (!fieldName) return null;
+    const match = (this.datasets[dataset] || []).find(field => field.name === fieldName) || null;
+    if (!match) return null;
+    if (expectedType && match.type !== expectedType) return null;
+    return match;
+  }
+
+  mapWidgetPayloadToElement(widget: DashboardWidgetPayload): DashboardElement {
+    const dataset = widget.dataset;
+    const yAxes = (widget.yAxes || [])
+      .map(name => this.resolveFieldByName(dataset, name, 'measure'))
+      .filter((field): field is Field => !!field);
+
+    const mapped: DashboardElement = {
+      id: widget.id,
+      type: widget.type,
+      visType: widget.visType,
+      dataset,
+      xAxis: this.resolveFieldByName(dataset, widget.xAxis, 'dimension'),
+      yAxis: this.resolveFieldByName(dataset, widget.yAxis, 'measure'),
+      yAxes,
+      yAggByMeasure: widget.yAggByMeasure || {},
+      legend: this.resolveFieldByName(dataset, widget.legend, 'dimension'),
+      drillDownField: this.resolveFieldByName(dataset, widget.drillDownField, 'dimension'),
+      columnsField: this.resolveFieldByName(dataset, widget.columnsField, 'dimension'),
+      yAgg: widget.yAgg || 'Sum',
+      dateColumn: this.resolveFieldByName(dataset, widget.dateColumn, 'dimension'),
+      conditionString: widget.conditionString || '',
+      limit: typeof widget.limit === 'number' ? widget.limit : 4,
+      dataLabelOption: widget.dataLabelOption || 'showValues',
+      enableCombination: !!widget.enableCombination,
+      sortBy: this.resolveFieldByName(dataset, widget.sortBy, 'dimension') || this.resolveFieldByName(dataset, widget.sortBy, 'measure'),
+      content: widget.type === 'text' ? (widget.title || 'Info') : '',
+      fontSize: 14,
+      color: '#1e293b',
+      width: widget.width || 4,
+      height: widget.height || 3,
+      title: widget.title || 'New Chart',
+      labelPosition: widget.labelPosition || 'Btm',
+      userEditedTitle: true,
+      xPos: 0,
+      yPos: 0,
+      showTable: false
+    };
+
+    if (!mapped.yAxis && mapped.yAxes.length > 0) {
+      mapped.yAxis = mapped.yAxes[0];
+    }
+
+    return mapped;
+  }
+
+  loadDashboardOnInit() {
+    this.chartPersistenceService.getDashboard().subscribe({
+      next: (response: DashboardGetResponse) => {
+        const mappedElements = (response.widgetlist || []).map(widget => this.mapWidgetPayloadToElement(widget));
+        this.elements.set(mappedElements);
+        this.pageFilters.set(response.page_filters || []);
+        this.selectedMeasureIdsByChart = {};
+        mappedElements.forEach(el => {
+          if (el.type === 'chart') {
+            this.selectedMeasureIdsByChart[el.id] = el.yAxes.map(field => field.id);
+          }
+        });
+        this.dirtyChartIds.set(new Set());
+        if (mappedElements.length > 0) {
+          this.selectElement(mappedElements[0].id);
+        }
+        setTimeout(() => this.refreshAllCharts(), 100);
+      },
+      error: (error) => {
+        console.error('[DASHBOARD_GET_ERROR] Failed to load dashboard:', error);
+        if (this.elements().length === 0) {
+          this.addDefaultHighchartsDrilldownWidget();
+        }
+      }
+    });
+  }
+
   closeDrilldown() {
     this.activeDrilldown.set(null);
+  }
+
+  enterEditMode() {
+    this.editMode.set(true);
+  }
+
+  cancelEditMode(event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.addMenuOpen.set(false);
+    this.loadDashboardOnInit();
+    this.editMode.set(false);
   }
 
   toggleSidebar() {
@@ -936,6 +390,7 @@ export class App implements OnInit {
     this.topFilterDateRange = 'This Week';
     this.topFilterService = 'All';
     this.topFilterPost = 'All';
+    this.editMode.set(false);
   }
 
   onTopDateFilterChange() {
@@ -1594,6 +1049,55 @@ export class App implements OnInit {
     const dirtyIds = Array.from(this.dirtyChartIds());
     const dirtyCharts = this.elements().filter(el => el.type === 'chart' && dirtyIds.includes(el.id));
     dirtyCharts.forEach(el => this.saveChart(el));
+  }
+
+  buildDashboardSavePayload(): DashboardSavePayload {
+    const now = new Date().toISOString();
+    const widgets = this.elements().map(el => ({
+      id: el.id,
+      type: el.type,
+      visType: el.visType,
+      title: el.title,
+      dataset: el.dataset,
+      xAxis: el.xAxis?.name || null,
+      yAxis: el.yAxes[0]?.name || el.yAxis?.name || null,
+      yAxes: el.yAxes.map(y => y.name),
+      yAgg: el.yAgg,
+      yAggByMeasure: el.yAggByMeasure,
+      legend: el.legend?.name || null,
+      drillDownField: el.drillDownField?.name || null,
+      columnsField: el.columnsField?.name || null,
+      dateColumn: el.dateColumn?.name || null,
+      conditionString: el.conditionString,
+      limit: el.limit,
+      dataLabelOption: el.dataLabelOption,
+      enableCombination: el.enableCombination,
+      sortBy: el.sortBy?.name || null,
+      labelPosition: el.labelPosition,
+      width: el.width,
+      height: el.height
+    }));
+
+    return {
+      id: `db-${Date.now()}`,
+      dashboardName: 'Sales Metrics Dashboard',
+      page_filters: this.pageFilters(),
+      datasets_used: Array.from(new Set(this.elements().map(el => el.dataset))),
+      widgetlist: widgets,
+      createdBy: 'system.user',
+      createdDate: now,
+      updateBy: 'system.user',
+      UpdateDate: now
+    };
+  }
+
+  saveDashboard(event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    const payload = this.buildDashboardSavePayload();
+    console.log('[DASHBOARD_SAVE_PAYLOAD]', payload);
+    this.saveAllDirtyCharts();
+    this.editMode.set(false);
+    this.addMenuOpen.set(false);
   }
 
   getDrilldownRows(el: DashboardElement, pointLabel: string = 'All'): DrilldownRow[] {

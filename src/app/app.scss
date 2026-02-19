@@ -25,6 +25,15 @@
 
 .main-header h1 { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
 .header-right { display: flex; gap: 12px; align-items: center; }
+.header-action-icon {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
 
 .btn { padding: 8px 16px; border-radius: 4px; font-weight: 600; font-size: 0.75rem; border: none; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
 .btn-primary { background: #eab308; color: #451a03; }
@@ -32,7 +41,7 @@
 .btn-icon { background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; border-radius: 4px; }
 
 .main-layout { display: flex; flex: 1; overflow: hidden; }
-.canvas-area { flex: 1; overflow: auto; padding: 20px; position: relative; }
+.canvas-area { flex: 1; overflow: auto; padding: 10px; position: relative; }
 
 .grid-container {
   display: grid;
@@ -54,7 +63,7 @@
 
 .widget-card.text-widget { background: transparent; border: 1px dashed transparent; box-shadow: none; }
 .widget-card.text-widget.selected { border: 1px dashed var(--primary); }
-.widget-card.selected { border: 2px solid var(--primary); z-index: 50; }
+.widget-card.selected { border: 2px solid var(--primary); z-index: 10; }
 
 .widget-header {
   padding: 8px 12px;

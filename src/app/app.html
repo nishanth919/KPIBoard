@@ -1,0 +1,475 @@
+<div class="app-container" (mousemove)="onGlobalMouseMove($event)" (mouseup)="onGlobalMouseUp()"
+    (click)="closeAddMenu()">
+    <!-- Header -->
+    <header class="main-header">
+        <div class="header-left">
+            <h1>Sales Metrics</h1>
+        </div>
+        <div class="header-right">
+            @if (!editMode()) {
+                <button class="header-action-icon" title="Edit" (click)="enterEditMode()">
+                    <mat-icon>edit</mat-icon>
+                </button>
+            } @else {
+                <button class="header-action-icon save" title="Save" (click)="saveDashboard($event)">
+                    <mat-icon>save</mat-icon>
+                </button>
+                <button class="header-action-icon" title="Cancel" (click)="cancelEditMode($event)">
+                    <mat-icon>close</mat-icon>
+                </button>
+                <div style="position: relative; display: flex; gap: 8px; align-items: center;" (click)="$event.stopPropagation()">
+                    <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 4px;" (click)="toggleAddMenu($event)">
+                        Add
+                        <mat-icon style="font-size: 18px; width: 18px; height: 18px;">arrow_drop_down</mat-icon>
+                    </button>
+                    @if (addMenuOpen()) {
+                        <div
+                            style="position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 170px; overflow: hidden; z-index: 180;">
+                            <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer;"
+                                (click)="addFromMenu('chart', $event)">Create Widget</button>
+                            <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer;"
+                                (click)="addFromMenu('text', $event)">Create Text</button>
+                            <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer; color: #b91c1c;"
+                                (click)="resetDashboard($event)">Create Dashboard</button>
+                        </div>
+                    }
+                </div>
+            }
+            <button class="btn-icon" (click)="toggleSidebar()">
+                <mat-icon>{{ sidebarOpened() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <!-- Canvas -->
+        <main class="canvas-area" id="canvas-container">
+            <section
+                style="position: sticky; top: 0; z-index: 40; background: #e5e7eb; border: 1px solid #d1d5db; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: end; gap: 10px; flex-wrap: wrap;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; min-width: 220px;">
+                        <span style="font-size: 12px; color: #6b7280;">Auto date filter</span>
+                        <div style="position: relative;">
+                            <mat-icon
+                                style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; width: 16px; height: 16px; color: #6b7280;">calendar_today</mat-icon>
+                            <select class="form-input" style="padding-left: 34px;" [(ngModel)]="topFilterDateRange"
+                                (ngModelChange)="onTopDateFilterChange()">
+                                @for (item of topFilterDateRanges; track item) {
+                                <option [value]="item">{{ item }}</option>
+                                }
+                            </select>
+                        </div>
+                    </label>
+                    <div style="position: relative;" (click)="$event.stopPropagation()">
+                        <button class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:6px;"
+                            (click)="togglePageFilterPicker($event)">
+                            + Add Page Filter
+                        </button>
+                        @if (pageFilterPickerOpen()) {
+                        <div
+                            style="position:absolute;right:0;top:calc(100% + 6px);width:260px;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:170;">
+                            <div
+                                style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#6b7280;font-weight:700;">
+                                Common Columns</div>
+                            <div style="max-height:220px;overflow:auto;padding:8px 10px;">
+                                @if (getCommonFilterColumns().length === 0) {
+                                <div style="font-size:12px;color:#9ca3af;padding:8px;">No common columns found</div>
+                                } @else {
+                                @for (col of getCommonFilterColumns(); track col) {
+                                <label
+                                    style="display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:13px;color:#334155;cursor:pointer;">
+                                    <input type="checkbox" [checked]="isPendingPageFilterSelected(col)"
+                                        (change)="togglePendingPageFilter(col)">
+                                    <span>{{ col }}</span>
+                                </label>
+                                }
+                                }
+                            </div>
+                            <div
+                                style="display:flex;justify-content:flex-end;gap:8px;padding:10px;border-top:1px solid #e5e7eb;">
+                                <button class="btn btn-secondary" style="padding:6px 10px;"
+                                    (click)="clearPageFilterPickerSelection()">Clear</button>
+                                <button class="btn btn-primary" style="padding:6px 10px;"
+                                    (click)="applyPageFilterSelection($event)">Done</button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                @if (pageFilters().length > 0) {
+                <div
+                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
+                    @for (pf of pageFilters(); track pf.column) {
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                            <span style="font-size:12px;color:#6b7280;">{{ pf.column }}</span>
+                            <button type="button"
+                                style="border:0;background:transparent;cursor:pointer;color:#94a3b8;line-height:1;"
+                                (click)="removePageFilter(pf.column, $event)">×</button>
+                        </label>
+                        <select class="form-input" [ngModel]="pf.value"
+                            (ngModelChange)="onPageFilterValueChange(pf.column, $event)">
+                            @for (opt of getFilterOptionsForColumn(pf.column); track opt) {
+                            <option [value]="opt">{{ opt }}</option>
+                            }
+                        </select>
+                        @if (showIneligibleFilterWarning(pf.column)) {
+                        <div style="font-size:11px;color:#b45309;">Few Charts are not eligible for this filter item.
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </section>
+            <div class="grid-container" id="grid-canvas">
+                @for (el of elements(); track el.id) {
+                <div [id]="el.id" class="widget-card" [class.selected]="selectedId() === el.id"
+                    [class.text-widget]="el.type === 'text'" [style.grid-column]="'span ' + el.width"
+                    [style.grid-row]="'span ' + el.height" [style.transform]="getTransform(el)"
+                    (mousedown)="selectElement(el.id)">
+
+                    <!-- Chart Header with Edit Icon -->
+                    @if (el.type === 'chart') {
+                    <div class="widget-header drag-handle" (mousedown)="startDrag($event, el)">
+                        <div class="header-main">
+                            <span class="widget-title">{{ el.title }}</span>
+                        </div>
+                        <div class="widget-actions">
+                            <button class="icon-action-btn" (click)="openProperties(); $event.stopPropagation()">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+                            <button class="icon-action-btn" (click)="removeElement(el.id); $event.stopPropagation()">
+                                <mat-icon>close</mat-icon>
+                            </button>
+                        </div>
+                    </div>
+                    } @else {
+                    <!-- Text Drag Handle -->
+                    <div class="text-drag-handle drag-handle" (mousedown)="startDrag($event, el)">
+                        <span class="edit-icon-text">::</span>
+                    </div>
+                    }
+
+                    <div class="widget-body">
+                        @if (el.type === 'chart') {
+                        <div [id]="'chart-' + el.id" class="chart-box"></div>
+                        } @else {
+                        <div class="text-box" [style.font-size.px]="el.fontSize" [style.color]="el.color">
+                            {{ el.content }}
+                        </div>
+                        }
+                        <div class="resize-handle" (mousedown)="startResize($event, el)"></div>
+                    </div>
+                </div>
+                @if (shouldRenderDrilldownAfter(el.id) && activeDrilldown(); as dd) {
+                <section class="canvas-drilldown-panel"
+                    [style.grid-row-end]="'span ' + getDrilldownPanelRowSpan(dd.rows.length)"
+                    [style.margin-bottom.px]="16">
+                    <div class="panel-top">
+                        <div>
+                            <div class="drilldown-title">Drilldown: {{ dd.pointLabel }}</div>
+                            <div class="drilldown-subtitle">{{ dd.agg }} of {{ dd.measureLabel }} by {{
+                                dd.dimensionLabel }}</div>
+                        </div>
+                        <button class="close-drilldown-btn" (click)="closeDrilldown()">Close</button>
+                    </div>
+                    <div class="drilldown-table-wrap">
+                        <table class="drilldown-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ dd.dimensionLabel }} Detail</th>
+                                    <th>{{ dd.agg }} {{ dd.measureLabel }}</th>
+                                    <th>Contribution</th>
+                                    <th>Status</th>
+                                    <th>Owner</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (row of dd.rows; track $index) {
+                                <tr>
+                                    <td>{{ row.detail }}</td>
+                                    <td>{{ row.measureValue | number:'1.0-0' }}</td>
+                                    <td>{{ row.contributionPct }}</td>
+                                    <td>
+                                        <span class="status-badge" [class.risk]="row.status === 'Risk'"
+                                            [class.watch]="row.status === 'Watch'">
+                                            {{ row.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ row.owner }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                }
+                }
+            </div>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" [class.open]="sidebarOpened()" style="position: relative; z-index: 140;">
+            <div class="sidebar-tabs">
+                <div class="tab" [class.active]="activeTab === 'PROPERTIES'" (click)="activeTab = 'PROPERTIES'">
+                    VISUALIZATIONS</div>
+                <div class="tab" [class.active]="activeTab === 'ADVANCED'" (click)="activeTab = 'ADVANCED'">ADVANCE
+                    OPTIONS</div>
+            </div>
+
+            <div class="sidebar-content">
+                @if (selectedElement(); as el) {
+
+                <!-- PROPERTIES TAB -->
+                @if (activeTab === 'PROPERTIES') {
+                <div class="config-container">
+                    <section class="config-section">
+                        <label>WIDGET NAME</label>
+                        <input type="text" [(ngModel)]="el.title" (ngModelChange)="updateTitle(el)" class="form-input"
+                            placeholder="Enter widget name...">
+                    </section>
+
+                    @if (el.type === 'chart') {
+                    <section class="config-section">
+                        <div class="vis-grid">
+                            @for (v of visTypes; track v.id) {
+                            <button class="vis-btn" [class.active]="el.visType === v.id" (click)="updateVisType(v.id)">
+                                @if (v.id === 'counter') {
+                                {{ v.icon }}
+                                } @else {
+                                <mat-icon>{{ v.icon }}</mat-icon>
+                                }
+                            </button>
+                            }
+                        </div>
+                        <div class="more-chart-row">
+                            <button type="button" class="more-chart-icon-btn" aria-label="More charts">
+                                <mat-icon>add_chart</mat-icon>
+                            </button>
+                            <select class="form-input select-input more-chart-select"
+                                (ngModelChange)="onMoreChartTypeSelect($event)" [ngModel]="''">
+                                <option value="">Select more chart type</option>
+                                @for (v of moreVisTypes; track v.id) {
+                                <option [value]="v.id">{{ v.name }}</option>
+                                }
+                            </select>
+                        </div>
+                    </section>
+
+                    <section class="config-section">
+                        <label>DATASET SELECTION</label>
+                        <select class="form-input select-input" [ngModel]="el.dataset"
+                            (ngModelChange)="onDatasetChange(el, $event)">
+                            @for (name of getDatasetNames(); track name) {
+                            <option [value]="name">{{ name }}</option>
+                            }
+                        </select>
+                    </section>
+
+                    <section class="config-section mapping-container">
+                        <label>FIELD MAPPING (X AXIS / Y AXIS / LEGEND)</label>
+                        <input class="form-input" type="text" placeholder="Search fields..."
+                            [ngModel]="getFieldSearch(el.id)" (ngModelChange)="setFieldSearch(el.id, $event)">
+
+                        <div class="mapping-child">
+                            <label>CATEGORY X AXIS</label>
+                            <select class="form-input select-input" [ngModel]="el.xAxis?.id || ''"
+                                (ngModelChange)="onDimensionSelect(el, $event, 'xAxis')">
+                                <option value="">Select category</option>
+                                @for (field of getFilteredDimensionFields(el); track field.id) {
+                                <option [value]="field.id">{{ field.name }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mapping-child">
+                            <div class="label-with-info">
+                                <label>VALUES Y AXIS</label>
+                                <button type="button" class="info-icon-btn"
+                                    title="Use Ctrl button to select or deselect more than one item.">
+                                    <mat-icon>info</mat-icon>
+                                </button>
+                            </div>
+                            <select class="form-input select-input" multiple [ngModel]="getSelectedMeasureIds(el)"
+                                (ngModelChange)="onMeasureSelect(el, $event)">
+                                @for (field of getFilteredMeasureFields(el); track field.id) {
+                                <option [value]="field.id">{{ field.name }}</option>
+                                }
+                            </select>
+                            <div class="field-hint">Hint: Use Ctrl button to select/deselect more than one item.</div>
+                            @for (metric of el.yAxes; track metric.id) {
+                            <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+                                <input class="form-input" [value]="metric.name" readonly>
+                                <select class="form-input select-input" [ngModel]="getYAgg(el, metric.id)"
+                                    (ngModelChange)="onMeasureAggChange(el, metric.id, $event)">
+                                    <option value="Sum">Sum</option>
+                                    <option value="Avg">Avg</option>
+                                    <option value="Min">Min</option>
+                                    <option value="Max">Max</option>
+                                </select>
+                                <button type="button" class="btn-icon" (click)="removeMeasure(el, metric.id)">×</button>
+                            </div>
+                            }
+                            @if (el.yAxes.length < 2) { <button type="button" class="btn-icon" style="margin-top:6px;"
+                                (click)="addMetric(el)">+ Add metric</button>
+                                }
+                        </div>
+
+                        <div class="mapping-child">
+                            <label>LEGEND</label>
+                            <select class="form-input select-input" [ngModel]="el.legend?.id || ''"
+                                (ngModelChange)="onDimensionSelect(el, $event, 'legend')">
+                                <option value="">Select legend</option>
+                                @for (field of getFilteredDimensionFields(el); track field.id) {
+                                <option [value]="field.id">{{ field.name }}</option>
+                                }
+                            </select>
+                        </div>
+                    </section>
+
+                    <section class="config-section">
+                        <label>DRILL DOWN</label>
+                        <select class="form-input select-input" [ngModel]="el.drillDownField?.id || ''"
+                            (ngModelChange)="onDimensionSelect(el, $event, 'drillDownField')">
+                            <option value="">Select drill down</option>
+                            @for (field of getDimensionFields(el); track field.id) {
+                            <option [value]="field.id">{{ field.name }}</option>
+                            }
+                        </select>
+                    </section>
+
+                    <section class="config-section">
+                        <label>COLUMNS</label>
+                        <select class="form-input select-input" [ngModel]="el.columnsField?.id || ''"
+                            (ngModelChange)="onDimensionSelect(el, $event, 'columnsField')">
+                            <option value="">Select columns</option>
+                            @for (field of getDimensionFields(el); track field.id) {
+                            <option [value]="field.id">{{ field.name }}</option>
+                            }
+                        </select>
+                    </section>
+                    } @else {
+                    <section class="config-section">
+                        <label>CONTENT</label>
+                        <textarea [(ngModel)]="el.content" class="form-input" rows="4"></textarea>
+                    </section>
+                    <div class="prop-row">
+                        <div class="prop-item">
+                            <label>Font Size</label>
+                            <input type="number" [(ngModel)]="el.fontSize" class="form-input">
+                        </div>
+                        <div class="prop-item">
+                            <label>Color</label>
+                            <input type="color" [(ngModel)]="el.color" class="color-input">
+                        </div>
+                    </div>
+                    }
+
+                    @if (el.type === 'chart') {
+                    <div class="widget-footer-actions"
+                        style="position: sticky; bottom: 0; background: #fff; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                        <button class="save-btn" [class.active]="isChartDirty(el)" [disabled]="!isChartDirty(el)"
+                            (click)="saveChart(el)">
+                            Save Chart
+                        </button>
+                        <button class="remove-btn half" (click)="removeElement(el.id)">Delete Widget</button>
+                    </div>
+                    } @else {
+                    <button class="remove-btn" style="position: sticky; bottom: 0; margin-top: 12px;"
+                        (click)="removeElement(el.id)">Delete Widget</button>
+                    }
+                </div>
+                }
+
+                <!-- DATA TAB -->
+                @if (activeTab === 'ADVANCED') {
+                <div class="data-explorer">
+                    @if (selectedElement()?.type === 'chart') {
+                    @if (selectedElement(); as selChart) {
+                    <section class="config-section">
+                        <label>LABEL POSITION</label>
+                        <div class="btn-group">
+                            @for (pos of ['Top', 'Btm', 'Lft', 'Rgt']; track pos) {
+                            <button [class.active]="selChart.labelPosition === pos"
+                                (click)="setLabelPosition(selChart, pos)">
+                                {{ pos }}
+                            </button>
+                            }
+                        </div>
+                    </section>
+
+                    <section class="config-section">
+                        <label>DATE COLUMN</label>
+                        <select class="form-input select-input" [ngModel]="selChart.dateColumn?.id || ''"
+                            (ngModelChange)="onDimensionSelect(selChart, $event, 'dateColumn')">
+                            <option value="">Select date column</option>
+                            @for (field of getDimensionFields(selChart); track field.id) {
+                            <option [value]="field.id">{{ field.name }}</option>
+                            }
+                        </select>
+                    </section>
+
+                    <section class="config-section">
+                        <label>CONDITION STRING</label>
+                        <textarea class="form-input" rows="4" [(ngModel)]="selChart.conditionString"
+                            (ngModelChange)="markChartDirty(selChart.id)"
+                            placeholder="Enter condition expression / notes..."></textarea>
+                    </section>
+
+                    <section class="config-section">
+                        <label>LIMIT (0-10)</label>
+                        <input class="form-input" type="number" min="0" max="10" [(ngModel)]="selChart.limit"
+                            (ngModelChange)="onLimitChange(selChart)">
+                    </section>
+
+                    <section class="config-section">
+                        <label>DATA LABEL OPTIONS</label>
+                        <select class="form-input select-input" [(ngModel)]="selChart.dataLabelOption"
+                            (ngModelChange)="onDataLabelOptionChange(selChart)">
+                            <option value="showValues">Show Values</option>
+                            <option value="percentage">Percentage</option>
+                            <option value="none">None</option>
+                        </select>
+                    </section>
+
+                    <section class="config-section">
+                        <label class="checkbox-row">
+                            <input type="checkbox" [(ngModel)]="selChart.enableCombination"
+                                (change)="onCombinationToggle(selChart)">
+                            Enable Combination Chart
+                        </label>
+                    </section>
+
+                    <section class="config-section">
+                        <label>SORT BY</label>
+                        <select class="form-input select-input" [ngModel]="selChart.sortBy?.id || ''"
+                            (ngModelChange)="onSortByChange(selChart, $event)">
+                            <option value="">Select sort field</option>
+                            @for (field of getAllFields(selChart); track field.id) {
+                            <option [value]="field.id">{{ field.name }}</option>
+                            }
+                        </select>
+                    </section>
+                    }
+                    } @else {
+                    <div class="empty-sidebar">
+                        <span>Tune</span>
+                        <p>Advance options are available for chart widgets only.</p>
+                    </div>
+                    }
+                </div>
+                }
+
+                } @else {
+                <div class="empty-sidebar">
+                    <span>Select</span>
+                    <p>Select a widget to edit properties</p>
+                </div>
+                }
+            </div>
+        </aside>
+    </div>
+</div>
