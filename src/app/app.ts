@@ -19,6 +19,7 @@ interface DashboardElement {
   xAxis: Field | null;
   yAxis: Field | null;
   yAxes: Field[];
+  yAggByMeasure: Record<string, 'Sum' | 'Avg' | 'Min' | 'Max'>;
   legend: Field | null;
   drillDownField: Field | null;
   columnsField: Field | null;
@@ -282,6 +283,17 @@ interface PageFilterItem {
                           </button>
                         }
                       </div>
+                      <div class="more-chart-row">
+                        <button type="button" class="more-chart-icon-btn" aria-label="More charts">
+                          <mat-icon>add_chart</mat-icon>
+                        </button>
+                        <select class="form-input select-input more-chart-select" (ngModelChange)="onMoreChartTypeSelect($event)" [ngModel]="''">
+                          <option value="">Select more chart type</option>
+                          @for (v of moreVisTypes; track v.id) {
+                            <option [value]="v.id">{{ v.name }}</option>
+                          }
+                        </select>
+                      </div>
                     </section>
 
                     <section class="config-section">
@@ -293,23 +305,29 @@ interface PageFilterItem {
                       </select>
                     </section>
 
-                    <section class="config-section">
-                      <label>CATEGORY X AXIS</label>
-                      <input class="form-input" type="text" placeholder="Search category..." [ngModel]="getCategorySearch(el.id)" (ngModelChange)="setCategorySearch(el.id, $event)">
-                      <select class="form-input select-input"
-                              [ngModel]="el.xAxis?.id || ''"
-                              (ngModelChange)="onDimensionSelect(el, $event, 'xAxis')">
-                        <option value="">Select category</option>
-                        @for (field of getFilteredDimensionFields(el); track field.id) {
-                          <option [value]="field.id">{{ field.name }}</option>
-                        }
-                      </select>
-                    </section>
+                    <section class="config-section mapping-container">
+                      <label>FIELD MAPPING (X AXIS / Y AXIS / LEGEND)</label>
+                      <input class="form-input" type="text" placeholder="Search fields..." [ngModel]="getFieldSearch(el.id)" (ngModelChange)="setFieldSearch(el.id, $event)">
 
-                    <section class="config-section">
-                      <label>VALUES Y AXIS</label>
-                      <input class="form-input" type="text" placeholder="Search values..." [ngModel]="getValueSearch(el.id)" (ngModelChange)="setValueSearch(el.id, $event)">
-                      <div class="value-chip">
+                      <div class="mapping-child">
+                        <label>CATEGORY X AXIS</label>
+                        <select class="form-input select-input"
+                                [ngModel]="el.xAxis?.id || ''"
+                                (ngModelChange)="onDimensionSelect(el, $event, 'xAxis')">
+                          <option value="">Select category</option>
+                          @for (field of getFilteredDimensionFields(el); track field.id) {
+                            <option [value]="field.id">{{ field.name }}</option>
+                          }
+                        </select>
+                      </div>
+
+                      <div class="mapping-child">
+                        <div class="label-with-info">
+                          <label>VALUES Y AXIS</label>
+                          <button type="button" class="info-icon-btn" title="Use Ctrl button to select or deselect more than one item.">
+                            <mat-icon>info</mat-icon>
+                          </button>
+                        </div>
                         <select class="form-input select-input"
                                 multiple
                                 [ngModel]="getSelectedMeasureIds(el)"
@@ -318,25 +336,37 @@ interface PageFilterItem {
                             <option [value]="field.id">{{ field.name }}</option>
                           }
                         </select>
-                        <select [(ngModel)]="el.yAgg" (change)="onAggChange(el)" class="agg-select">
-                          <option value="Sum">Sum</option>
-                          <option value="Avg">Avg</option>
-                          <option value="Min">Min</option>
-                          <option value="Max">Max</option>
+                        <div class="field-hint">Hint: Use Ctrl button to select/deselect more than one item.</div>
+                        @for (metric of el.yAxes; track metric.id) {
+                          <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+                            <input class="form-input" [value]="metric.name" readonly>
+                            <select class="form-input select-input"
+                                    [ngModel]="getYAgg(el, metric.id)"
+                                    (ngModelChange)="onMeasureAggChange(el, metric.id, $event)">
+                              <option value="Sum">Sum</option>
+                              <option value="Avg">Avg</option>
+                              <option value="Min">Min</option>
+                              <option value="Max">Max</option>
+                            </select>
+                            <button type="button" class="btn-icon" (click)="removeMeasure(el, metric.id)">×</button>
+                          </div>
+                        }
+                        @if (el.yAxes.length < 2) {
+                          <button type="button" class="btn-icon" style="margin-top:6px;" (click)="addMetric(el)">+ Add metric</button>
+                        }
+                      </div>
+
+                      <div class="mapping-child">
+                        <label>LEGEND</label>
+                        <select class="form-input select-input"
+                                [ngModel]="el.legend?.id || ''"
+                                (ngModelChange)="onDimensionSelect(el, $event, 'legend')">
+                          <option value="">Select legend</option>
+                          @for (field of getFilteredDimensionFields(el); track field.id) {
+                            <option [value]="field.id">{{ field.name }}</option>
+                          }
                         </select>
                       </div>
-                    </section>
-
-                    <section class="config-section">
-                      <label>LEGEND</label>
-                      <select class="form-input select-input"
-                              [ngModel]="el.legend?.id || ''"
-                              (ngModelChange)="onDimensionSelect(el, $event, 'legend')">
-                        <option value="">Select legend</option>
-                        @for (field of getDimensionFields(el); track field.id) {
-                          <option [value]="field.id">{{ field.name }}</option>
-                        }
-                      </select>
                     </section>
 
                     <section class="config-section">
@@ -425,7 +455,7 @@ interface PageFilterItem {
 
                       <section class="config-section">
                         <label>CONDITION STRING</label>
-                        <input class="form-input" type="text" [(ngModel)]="selChart.conditionString" (ngModelChange)="markChartDirty(selChart.id)" placeholder="e.g. Amount > 1000">
+                        <textarea class="form-input" rows="4" [(ngModel)]="selChart.conditionString" (ngModelChange)="markChartDirty(selChart.id)" placeholder="Enter condition expression / notes..."></textarea>
                       </section>
 
                       <section class="config-section">
@@ -711,8 +741,7 @@ export class App implements OnInit {
   pageFilterPickerOpen = signal(false);
   pendingPageFilterColumns = signal<Set<string>>(new Set());
   pageFilters = signal<PageFilterItem[]>([]);
-  categorySearchByChart: Record<string, string> = {};
-  valueSearchByChart: Record<string, string> = {};
+  fieldSearchByChart: Record<string, string> = {};
   selectedMeasureIdsByChart: Record<string, string[]> = {};
   topFilterDateRange = 'This Week';
   topFilterService = 'All';
@@ -768,6 +797,14 @@ export class App implements OnInit {
     { id: 'area', icon: 'area_chart' }, { id: 'pie-drilldown', icon: 'donut_large' },
     { id: 'counter', icon: '123' }
   ];
+  moreVisTypes = [
+    { id: 'gauge', name: 'Gauge Chart' },
+    { id: 'bullet', name: 'Bullet Chart' },
+    { id: 'timeseries', name: 'Time Series' },
+    { id: 'waterfall', name: 'Waterfall' },
+    { id: 'heatmap', name: 'Heat Map' },
+    { id: 'treemap', name: 'Tree Map' }
+  ];
 
   selectedElement = computed(() => this.elements().find(e => e.id === this.selectedId()));
 
@@ -816,6 +853,7 @@ export class App implements OnInit {
       xAxis: this.datasets['Sales'].find(field => field.id === 's2') || null, // Region
       yAxis: this.datasets['Sales'].find(field => field.id === 'sm1') || null, // Total Sales
       yAxes: this.datasets['Sales'].filter(field => field.id === 'sm1'),
+      yAggByMeasure: { sm1: 'Sum' },
       legend: null,
       drillDownField: null,
       columnsField: null,
@@ -890,8 +928,7 @@ export class App implements OnInit {
     this.selectedId.set(null);
     this.activeDrilldown.set(null);
     this.dirtyChartIds.set(new Set());
-    this.categorySearchByChart = {};
-    this.valueSearchByChart = {};
+    this.fieldSearchByChart = {};
     this.selectedMeasureIdsByChart = {};
     this.draggingElement = null;
     this.resizingElement = null;
@@ -1029,7 +1066,7 @@ export class App implements OnInit {
     const id = 'el-' + Math.random().toString(36).substr(2, 9);
     const newEl: DashboardElement = {
       id, type,
-      visType: 'column', dataset: 'Invoices', xAxis: null, yAxis: null, yAxes: [], legend: null, drillDownField: null, columnsField: null, yAgg: 'Sum',
+      visType: 'column', dataset: 'Invoices', xAxis: null, yAxis: null, yAxes: [], yAggByMeasure: {}, legend: null, drillDownField: null, columnsField: null, yAgg: 'Sum',
       dateColumn: null, conditionString: '', limit: 4, dataLabelOption: 'showValues', enableCombination: false, sortBy: null,
       content: 'Sample text widget. Click to edit content, font size and color.',
       fontSize: 14, color: '#1e293b',
@@ -1065,8 +1102,7 @@ export class App implements OnInit {
     if (this.selectedId() === id) this.selectedId.set(null);
     if (this.activeDrilldown()?.sourceElementId === id) this.activeDrilldown.set(null);
     delete this.selectedMeasureIdsByChart[id];
-    delete this.categorySearchByChart[id];
-    delete this.valueSearchByChart[id];
+    delete this.fieldSearchByChart[id];
     this.markChartSaved(id);
   }
 
@@ -1110,31 +1146,23 @@ export class App implements OnInit {
     return ids;
   }
 
-  getCategorySearch(chartId: string): string {
-    return this.categorySearchByChart[chartId] || '';
+  getFieldSearch(chartId: string): string {
+    return this.fieldSearchByChart[chartId] || '';
   }
 
-  setCategorySearch(chartId: string, value: string) {
-    this.categorySearchByChart[chartId] = value || '';
-  }
-
-  getValueSearch(chartId: string): string {
-    return this.valueSearchByChart[chartId] || '';
-  }
-
-  setValueSearch(chartId: string, value: string) {
-    this.valueSearchByChart[chartId] = value || '';
+  setFieldSearch(chartId: string, value: string) {
+    this.fieldSearchByChart[chartId] = value || '';
   }
 
   getFilteredDimensionFields(el: DashboardElement): Field[] {
-    const term = this.getCategorySearch(el.id).toLowerCase().trim();
+    const term = this.getFieldSearch(el.id).toLowerCase().trim();
     const source = this.getDimensionFields(el);
     if (!term) return source;
     return source.filter(field => field.name.toLowerCase().includes(term));
   }
 
   getFilteredMeasureFields(el: DashboardElement): Field[] {
-    const term = this.getValueSearch(el.id).toLowerCase().trim();
+    const term = this.getFieldSearch(el.id).toLowerCase().trim();
     const source = this.getMeasureFields(el);
     if (!term) return source;
     return source.filter(field => field.name.toLowerCase().includes(term));
@@ -1150,6 +1178,7 @@ export class App implements OnInit {
     el.xAxis = null;
     el.yAxis = null;
     el.yAxes = [];
+    el.yAggByMeasure = {};
     el.legend = null;
     el.drillDownField = null;
     el.columnsField = null;
@@ -1180,10 +1209,59 @@ export class App implements OnInit {
       .filter((field): field is Field => !!field && field.type === 'measure')
       .slice(0, 2);
 
+    const nextAggMap: Record<string, 'Sum' | 'Avg' | 'Min' | 'Max'> = {};
+    selectedFields.forEach(field => {
+      nextAggMap[field.id] = el.yAggByMeasure[field.id] || el.yAgg || 'Sum';
+    });
     el.yAxes = selectedFields;
     el.yAxis = selectedFields.length > 0 ? selectedFields[0] : null;
+    el.yAggByMeasure = nextAggMap;
     this.selectedMeasureIdsByChart[el.id] = selectedFields.map(field => field.id);
     this.applyAutoChartTitle(el);
+    this.refreshChart(el);
+    this.markChartDirty(el.id);
+  }
+
+  addMetric(el: DashboardElement) {
+    if (el.yAxes.length >= 2) return;
+    const selectedIds = new Set(el.yAxes.map(item => item.id));
+    const next = this.getFilteredMeasureFields(el).find(field => !selectedIds.has(field.id));
+    if (!next) return;
+    this.onMeasureSelect(el, [...el.yAxes.map(item => item.id), next.id]);
+  }
+
+  removeMeasure(el: DashboardElement, measureId: string) {
+    const remaining = el.yAxes.filter(item => item.id !== measureId).map(item => item.id);
+    this.onMeasureSelect(el, remaining);
+  }
+
+  getYAgg(el: DashboardElement, measureId: string): 'Sum' | 'Avg' | 'Min' | 'Max' {
+    return el.yAggByMeasure[measureId] || el.yAgg || 'Sum';
+  }
+
+  onMeasureAggChange(el: DashboardElement, measureId: string, agg: 'Sum' | 'Avg' | 'Min' | 'Max') {
+    el.yAggByMeasure[measureId] = agg;
+    if (el.yAxis?.id === measureId) {
+      el.yAgg = agg;
+    }
+    this.applyAutoChartTitle(el);
+    this.refreshChart(el);
+    this.markChartDirty(el.id);
+  }
+
+  onMoreChartTypeSelect(type: string) {
+    if (!type) return;
+    const el = this.selectedElement();
+    if (!el || el.type !== 'chart') return;
+    if (type === 'timeseries') {
+      el.visType = 'line';
+    } else if (type === 'waterfall' || type === 'gauge' || type === 'bullet') {
+      el.visType = 'column';
+    } else if (type === 'heatmap' || type === 'treemap') {
+      el.visType = 'area';
+    } else {
+      el.visType = type;
+    }
     this.refreshChart(el);
     this.markChartDirty(el.id);
   }
@@ -1485,6 +1563,7 @@ export class App implements OnInit {
       xAxis: el.xAxis?.name || null,
       yAxis: el.yAxes[0]?.name || null,
       yAxes: el.yAxes.map(y => y.name),
+      yAggByMeasure: el.yAggByMeasure,
       yAgg: el.yAgg,
       labelPosition: el.labelPosition,
       width: el.width,
@@ -1679,14 +1758,15 @@ export class App implements OnInit {
         return;
       }
 
-      const current = this.aggregateValues(values, el.yAgg);
+      const primaryAgg = this.getYAgg(el, el.yAxes[0].id);
+      const current = this.aggregateValues(values, primaryAgg);
       const trendSeed = el.yAxes[0].name.length + (el.limit || 0);
       const trendFactor = 0.82 + (trendSeed % 7) / 25; // deterministic 0.82..1.06
       const previous = current * trendFactor;
       const pctDelta = previous === 0 ? 0 : ((current - previous) / previous) * 100;
       const isUp = pctDelta >= 0;
       const pctLabel = `${isUp ? '+' : ''}${pctDelta.toFixed(1)}%`;
-      const counterTitle = `${el.yAgg} of ${el.yAxes[0].name}`;
+      const counterTitle = `${primaryAgg} of ${el.yAxes[0].name}`;
 
       container.innerHTML = `
         <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:14px 16px;gap:6px;">
@@ -1707,7 +1787,7 @@ export class App implements OnInit {
 
     const primaryMeasureName = el.yAxes[0]?.name ?? 'Value';
     const primarySeries = {
-      name: `${el.yAgg} of ${primaryMeasureName}`,
+      name: `${this.getYAgg(el, el.yAxes[0].id)} of ${primaryMeasureName}`,
       data: categories.map((name, idx) => ({ name, y: values[idx] })),
       color: '#3b82f6',
       borderRadius: 4
@@ -1715,7 +1795,7 @@ export class App implements OnInit {
     const secondaryValues = values.map(v => Math.round(v * 0.74));
     const secondarySeries = el.yAxes[1]
       ? {
-          name: `${el.yAgg} of ${el.yAxes[1].name}`,
+          name: `${this.getYAgg(el, el.yAxes[1].id)} of ${el.yAxes[1].name}`,
           data: categories.map((name, idx) => ({ name, y: secondaryValues[idx] })),
           color: '#22c55e',
           borderRadius: 4

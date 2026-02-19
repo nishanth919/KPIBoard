@@ -8,6 +8,7 @@ export interface ChartPostPayload {
   xAxis: string | null;
   yAxis: string | null;
   yAxes?: string[];
+  yAggByMeasure?: Record<string, 'Sum' | 'Avg' | 'Min' | 'Max'>;
   yAgg: 'Sum' | 'Avg' | 'Min' | 'Max';
   labelPosition: 'Top' | 'Btm' | 'Lft' | 'Rgt';
   width: number;
