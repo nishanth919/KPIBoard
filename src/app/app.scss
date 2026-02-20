@@ -23,8 +23,14 @@
   z-index: 100;
 }
 
-.main-header h1 { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
+.main-header h1 { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; cursor: text; }
 .header-right { display: flex; gap: 12px; align-items: center; }
+.header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dashboard-name-input { height: 30px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 8px; font-size: 14px; min-width: 220px; }
+.page-tabs { display: flex; gap: 6px; align-items: center; overflow-x: auto; max-width: 540px; }
+.page-tab-btn { border: 1px solid #d1d5db; background: #fff; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: #475569; cursor: pointer; white-space: nowrap; }
+.page-tab-btn.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 700; }
+.page-name-input { border: 0; background: transparent; width: 110px; font-size: 12px; outline: none; }
 .header-action-icon {
   border: 1px solid #cbd5e1;
   background: #fff;

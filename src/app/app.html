@@ -1,9 +1,30 @@
-<div class="app-container" (mousemove)="onGlobalMouseMove($event)" (mouseup)="onGlobalMouseUp()"
+<div class="app-container" (mousemove)="onGlobalMouseMove($event)" (mouseup)="onGlobalMouseUp($event)"
     (click)="closeAddMenu()">
     <!-- Header -->
     <header class="main-header">
         <div class="header-left">
-            <h1>Sales Metrics</h1>
+            @if (!editingDashboardName()) {
+                <h1 (dblclick)="beginDashboardNameEdit()">{{ dashboardName() }}</h1>
+            } @else {
+                <input class="dashboard-name-input" type="text" [ngModel]="dashboardNameDraft()"
+                    (ngModelChange)="dashboardNameDraft.set($event)" (blur)="commitDashboardNameEdit()"
+                    (keyup.enter)="commitDashboardNameEdit()" />
+            }
+            <div class="page-tabs">
+                @for (page of pages(); track page.id) {
+                    <button class="page-tab-btn" [class.active]="isCurrentPage(page.id)" (click)="switchPage(page.id)">
+                        @if (editingPageId() !== page.id) {
+                            <span (dblclick)="beginPageNameEdit(page); $event.stopPropagation()">{{ page.pagename }}</span>
+                        } @else {
+                            <input class="page-name-input" type="text" [ngModel]="pageNameDraft()"
+                                (ngModelChange)="pageNameDraft.set($event)"
+                                (blur)="commitPageNameEdit(page.id)"
+                                (keyup.enter)="commitPageNameEdit(page.id)"
+                                (click)="$event.stopPropagation()" />
+                        }
+                    </button>
+                }
+            </div>
         </div>
         <div class="header-right">
             @if (!editMode()) {
@@ -29,6 +50,8 @@
                                 (click)="addFromMenu('chart', $event)">Create Widget</button>
                             <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer;"
                                 (click)="addFromMenu('text', $event)">Create Text</button>
+                            <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer;"
+                                (click)="addPageFromMenu($event)">Add Page</button>
                             <button style="width: 100%; text-align: left; border: 0; background: #fff; padding: 10px 12px; cursor: pointer; color: #b91c1c;"
                                 (click)="resetDashboard($event)">Create Dashboard</button>
                         </div>
@@ -46,22 +69,43 @@
         <main class="canvas-area" id="canvas-container">
             <section
                 style="position: sticky; top: 0; z-index: 40; background: #e5e7eb; border: 1px solid #d1d5db; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: end; gap: 10px; flex-wrap: wrap;">
-                    <label style="display: flex; flex-direction: column; gap: 4px; min-width: 220px;">
-                        <span style="font-size: 12px; color: #6b7280;">Auto date filter</span>
-                        <div style="position: relative;">
-                            <mat-icon
-                                style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; width: 16px; height: 16px; color: #6b7280;">calendar_today</mat-icon>
-                            <select class="form-input" style="padding-left: 34px;" [(ngModel)]="topFilterDateRange"
-                                (ngModelChange)="onTopDateFilterChange()">
-                                @for (item of topFilterDateRanges; track item) {
-                                <option [value]="item">{{ item }}</option>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                    <div style="display:flex;align-items:flex-end;gap:10px;overflow-x:auto;flex:1;min-width:0;padding-bottom:2px;">
+                        <label style="display:flex;flex-direction:column;gap:4px;min-width:220px;flex:0 0 auto;">
+                            <span style="font-size: 12px; color: #6b7280;">Auto date filter</span>
+                            <div style="position: relative;">
+                                <mat-icon
+                                    style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; width: 16px; height: 16px; color: #6b7280;">calendar_today</mat-icon>
+                                <select class="form-input" style="padding-left: 34px;" [(ngModel)]="topFilterDateRange"
+                                    (ngModelChange)="onTopDateFilterChange()">
+                                    @for (item of topFilterDateRanges; track item) {
+                                    <option [value]="item">{{ item }}</option>
+                                    }
+                                </select>
+                            </div>
+                        </label>
+                        @for (pf of pageFilters(); track pf.column) {
+                        <div style="display:flex;flex-direction:column;gap:4px;min-width:190px;flex:0 0 auto;">
+                            <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                                <span style="font-size:12px;color:#6b7280;">{{ pf.column }}</span>
+                                <button type="button"
+                                    style="border:0;background:transparent;cursor:pointer;color:#94a3b8;line-height:1;"
+                                    (click)="removePageFilter(pf.column, $event)">×</button>
+                            </label>
+                            <select class="form-input" [ngModel]="pf.value"
+                                (ngModelChange)="onPageFilterValueChange(pf.column, $event)">
+                                @for (opt of getFilterOptionsForColumn(pf.column); track opt) {
+                                <option [value]="opt">{{ opt }}</option>
                                 }
                             </select>
+                            @if (showIneligibleFilterWarning(pf.column)) {
+                            <div style="font-size:11px;color:#b45309;">Few Charts are not eligible for this filter item.
+                            </div>
+                            }
                         </div>
-                    </label>
-                    <div style="position: relative;" (click)="$event.stopPropagation()">
+                        }
+                    </div>
+                    <div style="position:relative;flex:0 0 auto;" (click)="$event.stopPropagation()">
                         <button class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:6px;"
                             (click)="togglePageFilterPicker($event)">
                             + Add Page Filter
@@ -97,32 +141,6 @@
                         }
                     </div>
                 </div>
-
-                @if (pageFilters().length > 0) {
-                <div
-                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px;">
-                    @for (pf of pageFilters(); track pf.column) {
-                    <div style="display:flex;flex-direction:column;gap:4px;">
-                        <label style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-                            <span style="font-size:12px;color:#6b7280;">{{ pf.column }}</span>
-                            <button type="button"
-                                style="border:0;background:transparent;cursor:pointer;color:#94a3b8;line-height:1;"
-                                (click)="removePageFilter(pf.column, $event)">×</button>
-                        </label>
-                        <select class="form-input" [ngModel]="pf.value"
-                            (ngModelChange)="onPageFilterValueChange(pf.column, $event)">
-                            @for (opt of getFilterOptionsForColumn(pf.column); track opt) {
-                            <option [value]="opt">{{ opt }}</option>
-                            }
-                        </select>
-                        @if (showIneligibleFilterWarning(pf.column)) {
-                        <div style="font-size:11px;color:#b45309;">Few Charts are not eligible for this filter item.
-                        </div>
-                        }
-                    </div>
-                    }
-                </div>
-                }
             </section>
             <div class="grid-container" id="grid-canvas">
                 @for (el of elements(); track el.id) {

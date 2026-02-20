@@ -71,11 +71,21 @@ interface DashboardSavePayload {
   dashboardName: string;
   page_filters: PageFilterItem[];
   datasets_used: string[];
-  widgetlist: any[];
+  pages: Array<{
+    id: string;
+    pagename: string;
+    widgetlist: any[];
+  }>;
   createdBy: string;
   createdDate: string;
   updateBy: string;
   UpdateDate: string;
+}
+
+interface DashboardPageState {
+  id: string;
+  pagename: string;
+  widgetlist: DashboardElement[];
 }
 
 
@@ -94,8 +104,16 @@ export class App implements OnInit {
   sidebarOpened = signal(false);
   selectedId = signal<string | null>(null);
   elements = signal<DashboardElement[]>([]);
+  dashboardName = signal('Sales Metrics Dashboard');
+  editingDashboardName = signal(false);
+  dashboardNameDraft = signal('');
+  pages = signal<DashboardPageState[]>([]);
+  currentPageId = signal<string | null>(null);
+  editingPageId = signal<string | null>(null);
+  pageNameDraft = signal('');
   activeTab: 'PROPERTIES' | 'ADVANCED' = 'PROPERTIES';
   activeDrilldown = signal<DrilldownState | null>(null);
+  drilldownByPage = signal<Record<string, DrilldownState | null>>({});
   dirtyChartIds = signal<Set<string>>(new Set());
   addMenuOpen = signal(false);
   pageFilterPickerOpen = signal(false);
@@ -238,6 +256,14 @@ export class App implements OnInit {
 
     this.elements.update(prev => [...prev, defaultChart]);
     this.selectedMeasureIdsByChart[id] = ['sm1'];
+    const defaultPage: DashboardPageState = {
+      id: 'page-1',
+      pagename: 'Page 1',
+      widgetlist: [defaultChart]
+    };
+    this.pages.set([defaultPage]);
+    this.currentPageId.set(defaultPage.id);
+    this.dashboardName.set('Sales Metrics Dashboard');
     this.markChartSaved(id);
     this.scheduleChartRenderById(id);
   }
@@ -302,8 +328,21 @@ export class App implements OnInit {
   loadDashboardOnInit() {
     this.chartPersistenceService.getDashboard().subscribe({
       next: (response: DashboardGetResponse) => {
-        const mappedElements = (response.widgetlist || []).map(widget => this.mapWidgetPayloadToElement(widget));
+        this.dashboardName.set(response.dashboardName || 'Untitled');
+        this.editingDashboardName.set(false);
+        this.editingPageId.set(null);
+        const mappedPages: DashboardPageState[] = (response.pages || []).map((page, idx) => ({
+          id: page.id || `page-${idx + 1}`,
+          pagename: page.pagename || `Page ${idx + 1}`,
+          widgetlist: (page.widgetlist || []).map(widget => this.mapWidgetPayloadToElement(widget))
+        }));
+        this.pages.set(mappedPages);
+        const firstPage = mappedPages[0];
+        this.currentPageId.set(firstPage?.id || null);
+        const mappedElements = firstPage?.widgetlist || [];
         this.elements.set(mappedElements);
+        this.drilldownByPage.set({});
+        this.activeDrilldown.set(null);
         this.pageFilters.set(response.page_filters || []);
         this.selectedMeasureIdsByChart = {};
         mappedElements.forEach(el => {
@@ -328,6 +367,9 @@ export class App implements OnInit {
 
   closeDrilldown() {
     this.activeDrilldown.set(null);
+    const pageId = this.currentPageId();
+    if (!pageId) return;
+    this.drilldownByPage.update(current => ({ ...current, [pageId]: null }));
   }
 
   enterEditMode() {
@@ -372,6 +414,12 @@ export class App implements OnInit {
     this.addNewElement(type);
   }
 
+  addPageFromMenu(event: MouseEvent) {
+    event.stopPropagation();
+    this.addMenuOpen.set(false);
+    this.addPage();
+  }
+
   resetDashboard(event: MouseEvent) {
     event.stopPropagation();
     this.addMenuOpen.set(false);
@@ -381,6 +429,7 @@ export class App implements OnInit {
     this.elements.set([]);
     this.selectedId.set(null);
     this.activeDrilldown.set(null);
+    this.drilldownByPage.set({});
     this.dirtyChartIds.set(new Set());
     this.fieldSearchByChart = {};
     this.selectedMeasureIdsByChart = {};
@@ -390,7 +439,77 @@ export class App implements OnInit {
     this.topFilterDateRange = 'This Week';
     this.topFilterService = 'All';
     this.topFilterPost = 'All';
+    this.dashboardName.set('Untitled');
+    this.editingDashboardName.set(false);
+    const firstPage: DashboardPageState = { id: `page-${Date.now()}`, pagename: 'Page 1', widgetlist: [] };
+    this.pages.set([firstPage]);
+    this.currentPageId.set(firstPage.id);
     this.editMode.set(false);
+  }
+
+  beginDashboardNameEdit() {
+    this.dashboardNameDraft.set(this.dashboardName());
+    this.editingDashboardName.set(true);
+  }
+
+  commitDashboardNameEdit() {
+    const next = this.dashboardNameDraft().trim();
+    if (next) this.dashboardName.set(next);
+    this.editingDashboardName.set(false);
+  }
+
+  beginPageNameEdit(page: DashboardPageState) {
+    this.pageNameDraft.set(page.pagename);
+    this.editingPageId.set(page.id);
+  }
+
+  commitPageNameEdit(pageId: string) {
+    const next = this.pageNameDraft().trim();
+    if (next) {
+      this.pages.update(items => items.map(page => page.id === pageId ? { ...page, pagename: next } : page));
+    }
+    this.editingPageId.set(null);
+  }
+
+  isCurrentPage(pageId: string): boolean {
+    return this.currentPageId() === pageId;
+  }
+
+  syncCurrentPageWidgets() {
+    const currentId = this.currentPageId();
+    if (!currentId) return;
+    const currentWidgets = this.elements();
+    this.pages.update(items => items.map(page => page.id === currentId ? { ...page, widgetlist: currentWidgets } : page));
+  }
+
+  switchPage(pageId: string) {
+    if (this.currentPageId() === pageId) return;
+    this.syncCurrentPageWidgets();
+    const target = this.pages().find(page => page.id === pageId);
+    if (!target) return;
+    this.currentPageId.set(pageId);
+    this.elements.set(target.widgetlist || []);
+    this.activeDrilldown.set(this.drilldownByPage()[pageId] || null);
+    this.selectedMeasureIdsByChart = {};
+    this.elements().forEach(el => {
+      if (el.type === 'chart') {
+        this.selectedMeasureIdsByChart[el.id] = el.yAxes.map(field => field.id);
+      }
+    });
+    this.selectedId.set(this.elements()[0]?.id || null);
+    setTimeout(() => this.refreshAllCharts(), 80);
+  }
+
+  addPage() {
+    this.syncCurrentPageWidgets();
+    const nextIndex = this.pages().length + 1;
+    const newPage: DashboardPageState = {
+      id: `page-${Date.now()}-${nextIndex}`,
+      pagename: `Page ${nextIndex}`,
+      widgetlist: []
+    };
+    this.pages.update(items => [...items, newPage]);
+    this.switchPage(newPage.id);
   }
 
   onTopDateFilterChange() {
@@ -518,6 +637,9 @@ export class App implements OnInit {
   }
 
   addNewElement(type: 'chart' | 'text') {
+    if (!this.currentPageId() && this.pages().length > 0) {
+      this.currentPageId.set(this.pages()[0].id);
+    }
     const id = 'el-' + Math.random().toString(36).substr(2, 9);
     const newEl: DashboardElement = {
       id, type,
@@ -546,6 +668,7 @@ export class App implements OnInit {
       this.markChartDirty(id);
       this.scheduleChartRenderById(id);
     }
+    this.syncCurrentPageWidgets();
   }
 
   selectElement(id: string) {
@@ -555,10 +678,11 @@ export class App implements OnInit {
   removeElement(id: string) {
     this.elements.update(prev => prev.filter(e => e.id !== id));
     if (this.selectedId() === id) this.selectedId.set(null);
-    if (this.activeDrilldown()?.sourceElementId === id) this.activeDrilldown.set(null);
+    if (this.activeDrilldown()?.sourceElementId === id) this.closeDrilldown();
     delete this.selectedMeasureIdsByChart[id];
     delete this.fieldSearchByChart[id];
     this.markChartSaved(id);
+    this.syncCurrentPageWidgets();
   }
 
   onFieldClick(field: Field) {
@@ -802,6 +926,7 @@ export class App implements OnInit {
 
   // --- Drag & Drop Logic ---
   startDrag(event: MouseEvent, el: DashboardElement) {
+    if (!this.editMode()) return;
     event.stopPropagation();
     this.selectElement(el.id);
     this.draggingElement = el;
@@ -812,6 +937,7 @@ export class App implements OnInit {
   }
 
   startResize(event: MouseEvent, el: DashboardElement) {
+    if (!this.editMode()) return;
     event.stopPropagation();
     event.preventDefault();
     this.resizingElement = el;
@@ -825,6 +951,7 @@ export class App implements OnInit {
 
   @HostListener('window:mousemove', ['$event'])
   onGlobalMouseMove(event: MouseEvent) {
+    if (!this.editMode()) return;
     if (this.draggingElement) {
       this.draggingElement.xPos = event.clientX - this.dragOffset.x;
       this.draggingElement.yPos = event.clientY - this.dragOffset.y;
@@ -847,17 +974,21 @@ export class App implements OnInit {
     }
   }
 
-  @HostListener('window:mouseup')
-  onGlobalMouseUp() {
+  @HostListener('window:mouseup', ['$event'])
+  onGlobalMouseUp(event: MouseEvent) {
+    if (!this.editMode()) {
+      this.draggingElement = null;
+      this.resizingElement = null;
+      return;
+    }
     const dragged = this.draggingElement;
     const resized = this.resizingElement;
 
     if (this.draggingElement) {
+      this.reorderElementsOnDrop(this.draggingElement.id, event.clientX, event.clientY);
       // Snap to grid
       const container = document.getElementById('grid-canvas');
       if (container) {
-          // Simplified snapping - in a real grid we'd reorder the array,
-          // here we just reset visually but maintain the new properties
           this.draggingElement.xPos = 0;
           this.draggingElement.yPos = 0;
       }
@@ -871,6 +1002,65 @@ export class App implements OnInit {
     if (resized?.type === 'chart') {
       this.markChartDirty(resized.id);
     }
+  }
+
+  reorderElementsOnDrop(draggedId: string, clientX: number, clientY: number) {
+    const container = document.getElementById('grid-canvas');
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const isInsideGrid =
+      clientX >= containerRect.left &&
+      clientX <= containerRect.right &&
+      clientY >= containerRect.top &&
+      clientY <= containerRect.bottom;
+    if (!isInsideGrid) return;
+
+    const current = this.elements();
+    const fromIndex = current.findIndex(el => el.id === draggedId);
+    if (fromIndex < 0) return;
+
+    const targetId = this.getDropTargetId(draggedId, clientX, clientY);
+    if (!targetId) return;
+    const toIndex = current.findIndex(el => el.id === targetId);
+    if (toIndex < 0 || toIndex === fromIndex) return;
+
+    const reordered = [...current];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    this.elements.set(reordered);
+  }
+
+  getDropTargetId(draggedId: string, clientX: number, clientY: number): string | null {
+    const candidates = this.elements()
+      .filter(el => el.id !== draggedId)
+      .map(el => {
+        const node = document.getElementById(el.id);
+        if (!node) return null;
+        return { id: el.id, rect: node.getBoundingClientRect() };
+      })
+      .filter((entry): entry is { id: string; rect: DOMRect } => !!entry);
+
+    if (!candidates.length) return null;
+
+    const hovered = candidates.find(item =>
+      clientX >= item.rect.left &&
+      clientX <= item.rect.right &&
+      clientY >= item.rect.top &&
+      clientY <= item.rect.bottom
+    );
+    if (hovered) return hovered.id;
+
+    const nearest = candidates
+      .map(item => {
+        const cx = item.rect.left + item.rect.width / 2;
+        const cy = item.rect.top + item.rect.height / 2;
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+        return { id: item.id, dist: dx * dx + dy * dy };
+      })
+      .sort((a, b) => a.dist - b.dist)[0];
+
+    return nearest?.id || null;
   }
 
   getTransform(el: DashboardElement) {
@@ -963,6 +1153,13 @@ export class App implements OnInit {
       agg: el.yAgg,
       rows
     });
+    const pageId = this.currentPageId();
+    if (pageId) {
+      this.drilldownByPage.update(current => ({
+        ...current,
+        [pageId]: this.activeDrilldown()
+      }));
+    }
   }
 
   getDrilldownPanelRowSpan(rowCount: number): number {
@@ -1053,37 +1250,42 @@ export class App implements OnInit {
 
   buildDashboardSavePayload(): DashboardSavePayload {
     const now = new Date().toISOString();
-    const widgets = this.elements().map(el => ({
-      id: el.id,
-      type: el.type,
-      visType: el.visType,
-      title: el.title,
-      dataset: el.dataset,
-      xAxis: el.xAxis?.name || null,
-      yAxis: el.yAxes[0]?.name || el.yAxis?.name || null,
-      yAxes: el.yAxes.map(y => y.name),
-      yAgg: el.yAgg,
-      yAggByMeasure: el.yAggByMeasure,
-      legend: el.legend?.name || null,
-      drillDownField: el.drillDownField?.name || null,
-      columnsField: el.columnsField?.name || null,
-      dateColumn: el.dateColumn?.name || null,
-      conditionString: el.conditionString,
-      limit: el.limit,
-      dataLabelOption: el.dataLabelOption,
-      enableCombination: el.enableCombination,
-      sortBy: el.sortBy?.name || null,
-      labelPosition: el.labelPosition,
-      width: el.width,
-      height: el.height
+    this.syncCurrentPageWidgets();
+    const pagesPayload = this.pages().map(page => ({
+      id: page.id,
+      pagename: page.pagename,
+      widgetlist: page.widgetlist.map(el => ({
+        id: el.id,
+        type: el.type,
+        visType: el.visType,
+        title: el.title,
+        dataset: el.dataset,
+        xAxis: el.xAxis?.name || null,
+        yAxis: el.yAxes[0]?.name || el.yAxis?.name || null,
+        yAxes: el.yAxes.map(y => y.name),
+        yAgg: el.yAgg,
+        yAggByMeasure: el.yAggByMeasure,
+        legend: el.legend?.name || null,
+        drillDownField: el.drillDownField?.name || null,
+        columnsField: el.columnsField?.name || null,
+        dateColumn: el.dateColumn?.name || null,
+        conditionString: el.conditionString,
+        limit: el.limit,
+        dataLabelOption: el.dataLabelOption,
+        enableCombination: el.enableCombination,
+        sortBy: el.sortBy?.name || null,
+        labelPosition: el.labelPosition,
+        width: el.width,
+        height: el.height
+      }))
     }));
 
     return {
       id: `db-${Date.now()}`,
-      dashboardName: 'Sales Metrics Dashboard',
+      dashboardName: this.dashboardName(),
       page_filters: this.pageFilters(),
-      datasets_used: Array.from(new Set(this.elements().map(el => el.dataset))),
-      widgetlist: widgets,
+      datasets_used: Array.from(new Set(pagesPayload.flatMap(page => page.widgetlist.map((w: any) => w.dataset)))),
+      pages: pagesPayload,
       createdBy: 'system.user',
       createdDate: now,
       updateBy: 'system.user',
