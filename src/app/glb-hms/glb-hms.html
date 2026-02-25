@@ -1,236 +1,560 @@
+<div class="app-container">
+  @if (!isAuthenticated()) {
+    <section class="login-screen animate-fade-in">
+      <div class="login-header">
+        <div class="icon-chip"><span class="material-symbols-rounded">shield_person</span></div>
+        <h1>CareConnect</h1>
+        <p>Select your portal to continue</p>
+      </div>
 
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+      <div class="stack">
+        <label class="label">Access Portal</label>
+        <select class="input" [ngModel]="role()" (ngModelChange)="setRole($event)">
+          <option value="Doctor">Doctor Portal</option>
+          <option value="Staff">Nursing/Staff Portal</option>
+          <option value="Patient">Patient Portal</option>
+          <option value="Pharmacist">Pharmacy Portal</option>
+          <option value="Admin">Administration</option>
+        </select>
 
-    <div class="app-container">
+        <input type="text" [placeholder]="role() === 'Patient' ? 'Health ID' : 'Provider ID'" class="input" />
+        <input type="password" placeholder="Secure Password" class="input" />
+        <button (click)="login()" class="btn primary">Sign In to {{ role() }}</button>
+      </div>
+    </section>
+  }
 
-      <!-- 1. LOGIN SCREEN -->
-      @if (!isAuthenticated()) {
-        <div class="overlay-view login-screen animate-fade-in">
-          <div class="login-header">
-            <div class="icon-box-large">
-              <span class="material-symbols-rounded">shield_person</span>
-            </div>
-            <h1 class="app-title">CareConnect</h1>
-            <p class="app-subtitle">Select your portal to continue</p>
+  @if (isAuthenticated()) {
+    <div class="main-layout">
+      <header class="app-header">
+        <div class="user-profile">
+          @if (role() === 'Doctor' && selectedAppointment()) {
+            <button (click)="selectedAppointmentId.set(null)" class="icon-btn">
+              <span class="material-symbols-rounded">arrow_back</span>
+            </button>
+          }
+          <div class="avatar">{{ userInitials() }}</div>
+          <div>
+            <h2>{{ userName() }}</h2>
+            <span class="status-line"><span class="dot"></span>{{ role() }} • Online</span>
           </div>
-
-          <div class="form-container">
-            <div class="role-selector">
-              <label class="input-label">Access Portal</label>
-              <select class="input-field select-field" (change)="setRole($event)">
-                <option value="Doctor">Doctor Portal</option>
-                <option value="Staff">Nursing/Staff Portal</option>
-                <option value="Patient">Patient Portal</option>
-                <option value="Pharmacist">Pharmacy Portal</option>
-                <option value="Admin">Administration</option>
-              </select>
-            </div>
-
-            <input type="text" #userRef [placeholder]="role() === 'Patient' ? 'Health ID' : 'Provider ID'" class="input-field">
-            <input type="password" placeholder="Secure Password" class="input-field">
-            <button (click)="login(userRef.value)" class="btn-primary">Sign In to {{ role() }}</button>
-          </div>
-          <p class="security-footer">HealthCare Compliance Enabled</p>
         </div>
-      }
+        <button class="icon-btn" (click)="logout()"><span class="material-symbols-rounded">logout</span></button>
+      </header>
 
-      <!-- 2. MAIN LAYOUT -->
-      @if (isAuthenticated()) {
-        <div class="main-layout">
-
-          <header class="app-header">
-            <div class="user-profile">
-              @if (selectedPatient()) {
-                <button (click)="selectedPatient.set(null)" class="icon-btn mr-3">
-                   <span class="material-symbols-rounded">arrow_back</span>
-                </button>
-              }
-              <div class="avatar">{{ userInitials() }}</div>
-              <div class="user-info">
-                <h2 class="user-name">{{ userName() }}</h2>
-                <span class="session-status">
-                  <span class="status-dot"></span>
-                  {{ role() }} • Online
-                </span>
-              </div>
-            </div>
-            <div class="header-actions">
-              <button class="icon-btn" (click)="logout()">
-                <span class="material-symbols-rounded">logout</span>
-              </button>
-            </div>
-          </header>
-
-          <main class="content-area">
-
-            <!-- DOCTOR PORTAL -->
+      <main class="content-area">
+        @if (activeTab() === 'dashboard' && (role() === 'Doctor' || role() === 'Staff')) {
+          <section class="card section-gap">
+            <h4>{{ role() }} Dashboard</h4>
             @if (role() === 'Doctor') {
-              @if (selectedPatient(); as patient) {
-                <div class="section animate-slide-up">
-                  <div class="patient-profile-header">
-                    <div class="profile-avatar-large">{{ patient.patientName.charAt(0) }}</div>
-                    <div class="profile-details">
-                      <h3>{{ patient.patientName }}</h3>
-                      <p>Age: 45 • Male • ID: #PT-9921</p>
-                    </div>
-                  </div>
+              <div class="kpi-row">
+                <div class="kpi"><span>Visited Today</span><strong>{{ doctorDashboardMetrics().visitedToday }}</strong></div>
+                <div class="kpi"><span>Doctor Queue</span><strong>{{ doctorDashboardMetrics().inQueue }}</strong></div>
+                <div class="kpi"><span>In Waiting</span><strong>{{ doctorDashboardMetrics().waitingList }}</strong></div>
+                <div class="kpi"><span>Doctors Available</span><strong>{{ doctorDashboardMetrics().doctorsAvailable }}</strong></div>
+                <div class="kpi"><span>Online Visits</span><strong>{{ doctorDashboardMetrics().onlineVisitsToday }}</strong></div>
+              </div>
+            } @else {
+              <div class="kpi-row">
+                <div class="kpi"><span>Checked-in</span><strong>{{ staffDashboardMetrics().checkedInToday }}</strong></div>
+                <div class="kpi"><span>Waiting</span><strong>{{ staffDashboardMetrics().waitingNow }}</strong></div>
+                <div class="kpi"><span>Doctor Queue</span><strong>{{ staffDashboardMetrics().doctorQueue }}</strong></div>
+                <div class="kpi"><span>Critical Cases</span><strong>{{ staffDashboardMetrics().criticalCases }}</strong></div>
+                <div class="kpi"><span>Open Tasks</span><strong>{{ staffDashboardMetrics().openTasks }}</strong></div>
+              </div>
+            }
+          </section>
+        }
 
-                  <div class="action-grid mt-6">
-                    <div class="clinical-card">
-                      <div class="card-header"><span class="material-symbols-rounded">vital_signs</span> Vitals</div>
-                      <div class="vital-inputs">
-                        <input type="text" placeholder="BP" class="mini-input">
-                        <input type="text" placeholder="Temp" class="mini-input">
-                        <input type="text" placeholder="HR" class="mini-input">
-                      </div>
-                    </div>
-
-                    <div class="clinical-card mt-4">
-                      <div class="card-header"><span class="material-symbols-rounded">prescriptions</span> Rx & Labs</div>
-                      <div class="input-group">
-                         <label class="sub-label">Prescribe Medicine</label>
-                         <input type="text" placeholder="Search drug..." class="input-field mb-2">
-                         <label class="sub-label">Order Lab Test</label>
-                         <input type="text" placeholder="e.g. CBC" class="input-field">
-                      </div>
-                    </div>
-
-                    <div class="clinical-card mt-4">
-                      <div class="card-header"><span class="material-symbols-rounded">comment</span> Clinical Comments</div>
-                      <textarea placeholder="Observations..." class="input-field h-24"></textarea>
-                    </div>
-
-                    <button class="btn-primary mt-6 w-full" (click)="selectedPatient.set(null)">Save & Complete Visit</button>
+        @if (activeTab() === 'home') {
+          @if (role() === 'Doctor') {
+            @if (selectedAppointment(); as appt) {
+              <section class="card section-gap">
+                <div class="patient-head">
+                  <div class="avatar-large">{{ appt.patientName.charAt(0) }}</div>
+                  <div>
+                    <h3>{{ appt.patientName }}</h3>
+                    <p>{{ appt.time }} • {{ appt.type }} • {{ selectedDate() }}</p>
                   </div>
                 </div>
-              } @else {
-                <div class="section mb-6">
-                  <h3 class="section-title mb-3">Patient Focus</h3>
+              </section>
+
+              <section class="card form-card section-gap">
+                <h4><span class="material-symbols-rounded">ecg_heart</span> Vitals</h4>
+                <div class="grid-3">
+                  <input class="input pill" placeholder="BP" [ngModel]="vitalsBp()" (ngModelChange)="vitalsBp.set($event)" />
+                  <input class="input pill" placeholder="Temp" [ngModel]="vitalsTemp()" (ngModelChange)="vitalsTemp.set($event)" />
+                  <input class="input pill" placeholder="HR" [ngModel]="vitalsPulse()" (ngModelChange)="vitalsPulse.set($event)" />
+                </div>
+                <div class="telemetry-row">
+                  <span>O2: {{ liveVitals().oxygen }}%</span>
+                  <span>Pulse: {{ liveVitals().pulse }} bpm</span>
+                  <span>Temp: {{ liveVitals().temp }}F</span>
+                </div>
+              </section>
+
+              <section class="card form-card section-gap">
+                <h4><span class="material-symbols-rounded">prescriptions</span> Rx & Labs</h4>
+                <label class="sub-label">Prescribe Medicine</label>
+                <input class="input pill mb" placeholder="Search drug..." [ngModel]="prescribedDrug()" (ngModelChange)="prescribedDrug.set($event)" />
+                <label class="sub-label">Order Lab Test</label>
+                <input class="input pill mb" placeholder="e.g. CBC" [ngModel]="orderedLab()" (ngModelChange)="orderedLab.set($event)" />
+                <label class="sub-label">Digital Signature</label>
+                <input class="input pill" placeholder="e-sign" [ngModel]="eSign()" (ngModelChange)="eSign.set($event)" />
+                <button class="btn ghost mt" (click)="authorizePrescription()">Authorize Prescription</button>
+              </section>
+
+              <section class="card form-card section-gap">
+                <h4><span class="material-symbols-rounded">chat</span> Clinical Comments</h4>
+                <textarea class="input area" placeholder="Observations..." [ngModel]="clinicalComments()" (ngModelChange)="clinicalComments.set($event)"></textarea>
+              </section>
+
+              <button class="btn primary full" (click)="markVisitComplete()">Save & Complete Visit</button>
+            } @else {
+              <section class="portal-tabs section-gap">
+                <button class="tab-chip" [class.active]="doctorHomeTab() === 'focus'" (click)="doctorHomeTab.set('focus')">Patient Focus</button>
+                <button class="tab-chip" [class.active]="doctorHomeTab() === 'queue'" (click)="doctorHomeTab.set('queue')">Queue</button>
+                <button class="tab-chip" [class.active]="doctorHomeTab() === 'schedule'" (click)="doctorHomeTab.set('schedule')">Schedule</button>
+                <button class="tab-chip" [class.active]="doctorHomeTab() === 'waiting'" (click)="doctorHomeTab.set('waiting')">Waiting Room</button>
+                <button class="tab-chip" [class.active]="doctorHomeTab() === 'others'" (click)="doctorHomeTab.set('others')">Others</button>
+              </section>
+
+              @if (doctorHomeTab() === 'focus') {
+                <section class="card section-gap">
+                  <h4>Patient Focus</h4>
                   <div class="focus-row">
-                    <div class="focus-card upcoming" (click)="selectPatient('1')">
-                      <span class="focus-label">Next Patient</span>
-                      <p class="focus-name">Jane Smith</p>
-                      <span class="focus-time">09:00 AM • Online</span>
-                    </div>
-                    <div class="focus-card last" (click)="selectPatient('2')">
-                      <span class="focus-label">Last Seen</span>
-                      <p class="focus-name">Robert Fox</p>
-                      <span class="focus-time">08:30 AM • In-Person</span>
-                    </div>
+                    <button class="focus-card emphasis" (click)="nextPatient() && selectPatient(nextPatient()!.id)">
+                      <span>Next Patient</span>
+                      <strong>{{ nextPatient()?.patientName || 'No upcoming visit' }}</strong>
+                      <small>{{ nextPatient()?.time || '-' }} • {{ nextPatient()?.type || '-' }}</small>
+                    </button>
+                    <button class="focus-card" (click)="lastSeenPatient() && selectPatient(lastSeenPatient()!.id)">
+                      <span>Last Seen</span>
+                      <strong>{{ lastSeenPatient()?.patientName || 'No completed visits' }}</strong>
+                      <small>{{ lastSeenPatient()?.time || '-' }} • {{ lastSeenPatient()?.type || '-' }}</small>
+                    </button>
                   </div>
-                </div>
+                </section>
+              }
 
-                <div class="section">
-                  <div class="flex-row-between">
-                    <h3 class="section-title">Schedule</h3>
-                    <input type="date" class="date-mini" [value]="selectedDate()">
-                  </div>
-
-                  <div class="time-grid">
-                    @for (slot of timeSlots; track slot) {
-                      <div class="time-row">
-                        <div class="time-label">{{ slot }}</div>
-                        <div class="slot-content">
-                          @if (getApptForSlot(slot); as appt) {
-                            <div class="appt-card" [class.online]="appt.type === 'Online'" (click)="selectPatient(appt.id)">
-                              <div class="appt-main">
-                                <p class="appt-name">{{ appt.patientName }}</p>
-                                <p class="appt-meta">{{ appt.type }}</p>
-                              </div>
-                              @if (appt.type === 'Online') {
-                                <button (click)="toggleVideo(true); $event.stopPropagation()" class="btn-sm-primary">
-                                  <span class="material-symbols-rounded">videocam</span>
-                                </button>
-                              }
-                            </div>
-                          } @else {
-                            <div class="slot-empty">Available</div>
-                          }
+              @if (doctorHomeTab() === 'queue') {
+                <section class="card section-gap">
+                  <h4>Doctor Queue (From Nurse)</h4>
+                  @if (doctorQueue().length === 0) {
+                    <p class="tiny">No patients in doctor queue. Waiting for nurse vitals submissions.</p>
+                  } @else {
+                    @for (q of doctorQueue(); track q.patientId) {
+                      <div class="list-row queue-row" (click)="openDoctorQueuePatient(q.patientId)">
+                        <div>
+                          <strong>{{ q.patientName }}</strong>
+                          <small>BP {{ q.bp }} • Temp {{ q.temp }} • Pulse {{ q.pulse }} • {{ q.savedAt }}</small>
                         </div>
+                        <span class="badge">{{ q.triage }}</span>
                       </div>
                     }
+                  }
+                </section>
+              }
+
+              @if (doctorHomeTab() === 'schedule') {
+                <section class="card section-gap">
+                  <div class="row-between mb-sm">
+                    <h4>Daily Clinical Schedule</h4>
+                    <input type="date" class="input date" [ngModel]="selectedDate()" (ngModelChange)="selectedDate.set($event)" />
                   </div>
-                </div>
+                  @for (slot of timeSlots; track slot) {
+                    <div class="time-row">
+                      <span class="time-label">{{ slot }}</span>
+                      @if (getApptForSlot(slot); as appt) {
+                        <div class="appt-card" (click)="selectPatient(appt.id)">
+                          <div>
+                            <strong>{{ appt.patientName }}</strong>
+                            <small>{{ appt.type }} • {{ appt.status }}</small>
+                          </div>
+                          @if (appt.type === 'Online') {
+                            <button class="icon-cta" (click)="toggleVideo(true); $event.stopPropagation()"><span class="material-symbols-rounded">videocam</span></button>
+                          }
+                        </div>
+                      } @else {
+                        <div class="slot-empty">Available</div>
+                      }
+                    </div>
+                  }
+                </section>
+              }
+
+              @if (doctorHomeTab() === 'waiting') {
+                <section class="card section-gap">
+                  <h4>Waiting Room Visibility</h4>
+                  @for (w of waitingList(); track w.id) {
+                    <div class="list-row">
+                      <div>
+                        <strong>{{ w.patientName }}</strong>
+                        <small>{{ w.waitMinutes }}m waiting</small>
+                      </div>
+                      <span class="badge">{{ w.triage }}</span>
+                    </div>
+                  }
+                </section>
+              }
+
+              @if (doctorHomeTab() === 'others') {
+                <section class="card section-gap">
+                  <h4>Patient Rounds</h4>
+                  <div class="kpi-row">
+                    <div class="kpi"><span>Inpatients</span><strong>{{ inpatientCount() }}</strong></div>
+                    <div class="kpi"><span>Outpatients</span><strong>{{ outpatientCount() }}</strong></div>
+                  </div>
+                </section>
               }
             }
+          }
 
-            <!-- STAFF PORTAL -->
-            @if (role() === 'Staff') {
-              <div class="section">
-                <h3 class="section-title">Patient Desk</h3>
-                <div class="search-box mb-4 mt-3">
-                  <span class="material-symbols-rounded">search</span>
-                  <input type="text" placeholder="Search patient..." class="search-input">
-                </div>
-                <div class="tab-pill-container mb-4">
-                  <button class="pill active">Waiting List</button>
-                  <button class="pill">Slots</button>
-                </div>
-                <div class="waiting-list">
-                  @for (p of waitingList(); track p.id) {
-                    <div class="checkin-card">
-                      <div class="checkin-info">
-                        <p class="checkin-name">{{ p.patientName }}</p>
-                        <p class="checkin-meta">Wait: {{ p.time }}</p>
+          @if (role() === 'Staff') {
+            <section class="portal-tabs section-gap">
+              <button class="tab-chip" [class.active]="staffHomeTab() === 'query'" (click)="staffHomeTab.set('query')">Patient Query</button>
+              <button class="tab-chip" [class.active]="staffHomeTab() === 'desk'" (click)="staffHomeTab.set('desk')">Appointment Desk</button>
+              <button class="tab-chip" [class.active]="staffHomeTab() === 'live'" (click)="staffHomeTab.set('live')">Live</button>
+              <button class="tab-chip" [class.active]="staffHomeTab() === 'vitals'" (click)="staffHomeTab.set('vitals')">Vital Entry</button>
+              <button class="tab-chip" [class.active]="staffHomeTab() === 'care'" (click)="staffHomeTab.set('care')">Care Plan</button>
+              <button class="tab-chip" [class.active]="staffHomeTab() === 'bed'" (click)="staffHomeTab.set('bed')">Bed Status</button>
+            </section>
+
+            @if (staffHomeTab() === 'query') {
+              <section class="card section-gap">
+                <h4>Patient Query & Check-in</h4>
+                <input class="input" placeholder="Search patient..." [ngModel]="patientSearch()" (ngModelChange)="patientSearch.set($event)" />
+                <div class="list-wrap">
+                  @for (p of filteredPatients(); track p.id) {
+                    <div class="list-row">
+                      <div>
+                        <strong>{{ p.name }}</strong>
+                        <small>{{ p.lane }}</small>
                       </div>
-                      <span class="badge yellow">Waiting</span>
+                      <button class="btn ghost" (click)="checkInPatient(p.id)">Check-in</button>
                     </div>
                   }
                 </div>
-                <button class="btn-outline-primary mt-6 w-full">Book Appointment</button>
-              </div>
+              </section>
             }
 
-            <!-- PATIENT PORTAL -->
-            @if (role() === 'Patient') {
-              <div class="section">
-                <div class="welcome-card">
-                  <h3>Hello, {{ userName() }}</h3>
-                  <p>Health ID: #PH-8821</p>
+            @if (staffHomeTab() === 'desk') {
+              <section class="card section-gap">
+                <h4>Appointment Desk</h4>
+                <div class="grid-3">
+                  <select class="input" [ngModel]="staffBookPatientId()" (ngModelChange)="staffBookPatientId.set($event)">
+                    @for (p of patients(); track p.id) {
+                      <option [value]="p.id">{{ p.name }}</option>
+                    }
+                  </select>
+                  <select class="input" [ngModel]="staffBookType()" (ngModelChange)="staffBookType.set($event)">
+                    <option value="In-Person">In-Person</option>
+                    <option value="Online">Online</option>
+                  </select>
+                  <select class="input" [ngModel]="staffBookTime()" (ngModelChange)="staffBookTime.set($event)">
+                    @for (slot of timeSlots; track slot) {
+                      <option [value]="slot">{{ slot }}</option>
+                    }
+                  </select>
                 </div>
-                <h3 class="section-title mt-6">Request Appointment</h3>
-                <div class="request-form mt-3">
-                   <div class="type-selector">
-                      <button class="type-btn" [class.active]="reqType() === 'In-Person'" (click)="reqType.set('In-Person')">
-                        <span class="material-symbols-rounded">location_on</span>
-                        <span>In-Person</span>
-                      </button>
-                      <button class="type-btn" [class.active]="reqType() === 'Online'" (click)="reqType.set('Online')">
-                        <span class="material-symbols-rounded">videocam</span>
-                        <span>Online</span>
-                      </button>
-                   </div>
-                   <button class="btn-primary mt-4 w-full">Submit Request</button>
-                </div>
-              </div>
+                <button class="btn primary mt" (click)="bookAppointment()">Book Appointment</button>
+              </section>
             }
 
-          </main>
+            @if (staffHomeTab() === 'live') {
+              <section class="card section-gap">
+                <h4>Live Waiting List</h4>
+                <div class="live-list">
+                  @for (w of waitingList(); track w.id) {
+                    <div class="live-item" (click)="selectWaitingPatient(w.id)">
+                      <div class="live-head">
+                        <div>
+                          <strong>{{ w.patientName }}</strong>
+                          <small>Wait: {{ w.waitMinutes }}m</small>
+                        </div>
+                        <div class="wait-picker-wrap" (click)="$event.stopPropagation()">
+                          <button class="wait-chip picker-btn" (click)="toggleLiveTriagePicker(w.id)">
+                            {{ w.triage }}
+                          </button>
+                          @if (liveTriagePickerId() === w.id) {
+                            <div class="triage-menu">
+                              <button class="triage-menu-item" (click)="updateTriage(w.id, 'Low')">Low</button>
+                              <button class="triage-menu-item" (click)="updateTriage(w.id, 'Medium')">Medium</button>
+                              <button class="triage-menu-item" (click)="updateTriage(w.id, 'High')">High</button>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                      <div class="live-controls">
+                        <button class="btn ghost live-btn" (click)="startVitalsFromLive(w.id); $event.stopPropagation()">Record Vitals</button>
+                        <button class="btn ghost live-btn" (click)="escalateMessage(w.id); $event.stopPropagation()">Escalate</button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
 
-          <nav class="bottom-nav">
-            <button (click)="activeTab.set('home')" [class.active]="activeTab() === 'home'" class="nav-item">
-              <span class="material-symbols-rounded" [class.fill-icon]="activeTab() === 'home'">
-                {{ role() === 'Doctor' ? 'calendar_month' : 'home' }}
-              </span>
-              <span class="nav-label">Home</span>
-            </button>
-            <button class="nav-item"><span class="material-symbols-rounded">chat_bubble</span><span class="nav-label">Chat</span></button>
-            <button class="nav-item"><span class="material-symbols-rounded">settings</span><span class="nav-label">Settings</span></button>
-          </nav>
-        </div>
-      }
+            @if (staffHomeTab() === 'vitals') {
+              <section class="card section-gap">
+                <h4>Nurse Vitals Entry</h4>
+                @if (selectedVitalsPatientId()) {
+                  <p class="tiny">Selected: {{ selectedVitalsPatientName() }} ({{ selectedVitalsTriage() }})</p>
+                  <div class="grid-3">
+                    <input class="input" placeholder="BP" [ngModel]="nurseVitalsBp()" (ngModelChange)="nurseVitalsBp.set($event)" />
+                    <input class="input" placeholder="Temp" [ngModel]="nurseVitalsTemp()" (ngModelChange)="nurseVitalsTemp.set($event)" />
+                    <input class="input" placeholder="Pulse" [ngModel]="nurseVitalsPulse()" (ngModelChange)="nurseVitalsPulse.set($event)" />
+                  </div>
+                  <textarea class="input area mt" placeholder="Nurse notes..." [ngModel]="nurseVitalsNotes()" (ngModelChange)="nurseVitalsNotes.set($event)"></textarea>
+                  <button class="btn primary mt" (click)="saveNurseVitalsToDoctorQueue()">Save Vitals & Send To Doctor Queue</button>
+                } @else {
+                  <p class="tiny">Click Record Vitals from Live tab, or edit an existing vitals record below.</p>
+                }
+              </section>
 
-      <!-- VIDEO OVERLAY -->
-      @if (isVideoActive()) {
-        <div class="overlay-view video-overlay">
-          <div class="video-container">
-            <div class="patient-feed">
-              <div class="placeholder-avatar-v"><span class="material-symbols-rounded">person</span></div>
-              <p class="feed-name">Jane Smith</p>
+              <section class="card section-gap">
+                <h4>Vitals Records (Edit)</h4>
+                @if (nurseVitalsRecords().length === 0) {
+                  <p class="tiny">No vitals records yet.</p>
+                } @else {
+                  @for (record of nurseVitalsRecords(); track record.patientId) {
+                    <div class="list-row">
+                      <div>
+                        <strong>{{ record.patientName }}</strong>
+                        <small>BP {{ record.bp }} • Temp {{ record.temp }} • Pulse {{ record.pulse }} • {{ record.savedAt }}</small>
+                      </div>
+                      <button class="btn ghost" (click)="editNurseVitalsRecord(record.patientId)">Edit</button>
+                    </div>
+                  }
+                }
+              </section>
+            }
+
+            @if (staffHomeTab() === 'care') {
+              <section class="card section-gap">
+                <h4>Care Plan Execution</h4>
+                @for (t of tasks(); track t.id) {
+                  <label class="task-row">
+                    <input type="checkbox" [checked]="t.done" (change)="toggleTask(t.id)" />
+                    <span [class.done]="t.done">{{ t.label }}</span>
+                  </label>
+                }
+              </section>
+            }
+
+            @if (staffHomeTab() === 'bed') {
+              <section class="card">
+                <h4>Bed & Status Management</h4>
+                @for (p of patients(); track p.id) {
+                  <div class="list-row">
+                    <strong>{{ p.name }}</strong>
+                    <select class="input mini" [ngModel]="p.bedStatus" (ngModelChange)="updateBedStatus(p.id, $event)">
+                      <option value="Stable">Stable</option>
+                      <option value="Critical">Critical</option>
+                      <option value="Pending Discharge">Pending Discharge</option>
+                    </select>
+                  </div>
+                }
+              </section>
+            }
+          }
+
+          @if (role() === 'Patient') {
+            <section class="card section-gap">
+              <h4>Appointment Requests</h4>
+              <div class="grid-3">
+                <button class="btn ghost" [class.active]="reqType() === 'In-Person'" (click)="reqType.set('In-Person')">In-Person</button>
+                <button class="btn ghost" [class.active]="reqType() === 'Online'" (click)="reqType.set('Online')">Online</button>
+                <select class="input" [ngModel]="requestTime()" (ngModelChange)="requestTime.set($event)">
+                  @for (slot of timeSlots; track slot) {
+                    <option [value]="slot">{{ slot }}</option>
+                  }
+                </select>
+              </div>
+              <button class="btn primary mt" (click)="submitAppointmentRequest()">Submit Request</button>
+            </section>
+
+            <section class="card section-gap">
+              <h4>Health Dashboard</h4>
+              <div class="kpi-row">
+                <div class="kpi"><span>BP</span><strong>{{ liveVitals().bp }}</strong></div>
+                <div class="kpi"><span>Pulse</span><strong>{{ liveVitals().pulse }}</strong></div>
+              </div>
+              <h5>Recent Labs</h5>
+              @for (lab of patientLabs; track lab) {
+                <p class="tiny">{{ lab }}</p>
+              }
+              <h5>Care Plan</h5>
+              @for (plan of patientCarePlans; track plan) {
+                <p class="tiny">{{ plan }}</p>
+              }
+            </section>
+
+            <section class="card section-gap">
+              <h4>Pharmacy Integration</h4>
+              <div class="row-gap">
+                <input class="input" [ngModel]="refillDrug()" (ngModelChange)="refillDrug.set($event)" />
+                <button class="btn ghost" (click)="submitRefillRequest()">Request Refill</button>
+              </div>
+              @for (r of refillRequests(); track r.id) {
+                <p class="tiny">{{ r.drug }} • {{ r.status }}</p>
+              }
+            </section>
+
+            <section class="card">
+              <h4>Telehealth Access</h4>
+              @if (patientOnlineVisit) {
+                <p class="tiny">Today {{ patientOnlineVisit.time }} online consultation is available.</p>
+                <button class="btn primary" (click)="toggleVideo(true)">Join Video Consultation</button>
+              } @else {
+                <p class="tiny">No online sessions scheduled for selected date.</p>
+              }
+            </section>
+          }
+
+          @if (role() === 'Pharmacist') {
+            <section class="card section-gap">
+              <h4>Order Queue Management</h4>
+              @for (o of pharmacyOrders(); track o.id) {
+                <div class="order-card">
+                  <div>
+                    <strong>{{ o.patientName }}</strong>
+                    <small>{{ o.medicine }} • {{ o.prescribedBy }}</small>
+                    <small class="sig">Signed: {{ o.signature }}</small>
+                  </div>
+                  <div class="order-actions">
+                    <button class="btn ghost" (click)="runSafetyCheck(o.id)">Safety Verify</button>
+                    <select class="input mini" [ngModel]="o.status" (ngModelChange)="updateOrderStatus(o.id, $event)">
+                      <option value="Queued">Queued</option>
+                      <option value="Verifying">Verifying</option>
+                      <option value="Ready for Pickup">Ready for Pickup</option>
+                      <option value="Out for Delivery">Out for Delivery</option>
+                    </select>
+                  </div>
+                  <div class="kpi-row">
+                    <div class="kpi"><span>Drug Interaction</span><strong>{{ o.interactionChecked ? 'Checked' : 'Pending' }}</strong></div>
+                    <div class="kpi"><span>Allergy Check</span><strong>{{ o.allergyChecked ? 'Checked' : 'Pending' }}</strong></div>
+                  </div>
+                </div>
+              }
+            </section>
+
+            <section class="card">
+              <h4>Clinical Query</h4>
+              <textarea class="input area" placeholder="Message prescribing doctor..." [ngModel]="pharmacyQuery()" (ngModelChange)="pharmacyQuery.set($event)"></textarea>
+              <button class="btn primary mt" (click)="sendPharmacyQuery()">Send to Doctor</button>
+            </section>
+          }
+
+          @if (role() === 'Admin') {
+            <section class="card section-gap">
+              <h4>User & Role Management</h4>
+              @for (u of users(); track u.id) {
+                <div class="list-row">
+                  <div>
+                    <strong>{{ u.name }}</strong>
+                    <small>{{ u.role }}</small>
+                  </div>
+                  <button class="btn ghost" (click)="toggleUserEnabled(u.id)">{{ u.enabled ? 'Disable' : 'Enable' }}</button>
+                </div>
+              }
+            </section>
+
+            <section class="card section-gap">
+              <h4>MFA & Credentialing</h4>
+              @for (u of users(); track u.id) {
+                <div class="list-row">
+                  <strong>{{ u.name }}</strong>
+                  <button class="btn ghost" (click)="toggleMfa(u.id)">{{ u.mfaRequired ? 'MFA ON' : 'MFA OFF' }}</button>
+                </div>
+              }
+            </section>
+
+            <section class="card section-gap">
+              <h4>Clinic Analytics</h4>
+              <div class="kpi-row">
+                <div class="kpi"><span>Throughput</span><strong>{{ analytics().throughput }}</strong></div>
+                <div class="kpi"><span>Waiting</span><strong>{{ analytics().activeWaiting }}</strong></div>
+                <div class="kpi"><span>Resp (min)</span><strong>{{ analytics().responseMinutes }}</strong></div>
+              </div>
+            </section>
+
+            <section class="card">
+              <h4>Security & Audit Logs</h4>
+              @for (log of auditLogs(); track log) {
+                <p class="tiny">{{ log }}</p>
+              }
+            </section>
+          }
+        }
+
+        @if (activeTab() === 'chat') {
+          <section class="card section-gap">
+            <h4>Clinical Messaging (E2EE)</h4>
+            <div class="row-gap">
+              <select class="input" [ngModel]="chatTarget()" (ngModelChange)="chatTarget.set($event)">
+                @for (t of chatTargets(); track t) {
+                  <option [value]="t">{{ t }}</option>
+                }
+              </select>
+              <div class="chat-box">
+                @for (m of visibleMessages(); track m.id) {
+                  <div class="chat-row" [class.self]="m.from === role()">
+                    <strong>{{ m.from }}</strong>
+                    <p>{{ m.body }}</p>
+                    <small>{{ m.time }}</small>
+                  </div>
+                }
+              </div>
+              <div class="composer">
+                <input class="input" placeholder="Type secure message..." [ngModel]="chatDraft()" (ngModelChange)="chatDraft.set($event)" />
+                <button class="btn primary" (click)="sendMessage()">Send</button>
+              </div>
             </div>
-            <button (click)="toggleVideo(false)" class="hangup-btn"><span class="material-symbols-rounded">call_end</span></button>
-          </div>
-        </div>
-      }
+          </section>
+        }
 
+        @if (activeTab() === 'settings') {
+          <section class="card">
+            <h4>Portal Settings</h4>
+            <p class="tiny">Role: {{ role() }}</p>
+            <p class="tiny">Selected Date: {{ selectedDate() }}</p>
+            <p class="tiny">Telehealth: {{ isVideoActive() ? 'Active' : 'Idle' }}</p>
+            <p class="tiny">Notifications: Enabled</p>
+          </section>
+        }
+      </main>
+
+      <nav class="bottom-nav" [class.has-dashboard]="role() === 'Doctor' || role() === 'Staff'">
+        @if (role() === 'Doctor' || role() === 'Staff') {
+          <button class="nav-item" [class.active]="activeTab() === 'dashboard'" (click)="activeTab.set('dashboard')">
+            <span class="material-symbols-rounded">dashboard</span>
+            <span>Dashboard</span>
+          </button>
+        }
+        <button class="nav-item" [class.active]="activeTab() === 'home'" (click)="activeTab.set('home')">
+          <span class="material-symbols-rounded">home</span>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" [class.active]="activeTab() === 'chat'" (click)="activeTab.set('chat')">
+          <span class="material-symbols-rounded">chat_bubble</span>
+          <span>Chat</span>
+        </button>
+        <button class="nav-item" [class.active]="activeTab() === 'settings'" (click)="activeTab.set('settings')">
+          <span class="material-symbols-rounded">settings</span>
+          <span>Settings</span>
+        </button>
+      </nav>
     </div>
+  }
+
+  @if (isVideoActive()) {
+    <div class="video-overlay" (click)="toggleVideo(false)">
+      <div class="video-card" (click)="$event.stopPropagation()">
+        <div class="video-avatar"><span class="material-symbols-rounded">person</span></div>
+        <p>Secure Video Session Active</p>
+        <button class="btn danger" (click)="toggleVideo(false)">End Call</button>
+      </div>
+    </div>
+  }
+</div>
