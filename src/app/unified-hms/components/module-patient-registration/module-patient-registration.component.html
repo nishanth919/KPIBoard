@@ -1,0 +1,127 @@
+<section class="panel">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">4.1</p>
+      <h3>Patient Registration & Demographics</h3>
+    </div>
+    <button class="btn ghost" type="button" (click)="startNewPatient()">+ New Patient</button>
+  </div>
+
+  <div class="patient-list">
+    @for (patient of patients; track patient.id) {
+      <button
+        type="button"
+        class="patient-row"
+        [class.active]="patient.id === selectedPatientId"
+        (click)="selectPatient(patient.id)"
+      >
+        <strong>{{ patient.fullName || 'Unnamed Patient' }}</strong>
+        <span>{{ patient.id }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="grid two">
+    <label>
+      <span>Patient ID</span>
+      <input [(ngModel)]="draft.id" placeholder="UHMS-000001" />
+    </label>
+    <label>
+      <span>Full Name</span>
+      <input [(ngModel)]="draft.fullName" placeholder="Patient full name" />
+    </label>
+    <label>
+      <span>Date of Birth</span>
+      <input type="date" [(ngModel)]="draft.dob" />
+    </label>
+    <label>
+      <span>Gender</span>
+      <select [(ngModel)]="draft.gender">
+        <option value="">Select</option>
+        <option value="Female">Female</option>
+        <option value="Male">Male</option>
+        <option value="Other">Other</option>
+      </select>
+    </label>
+    <label>
+      <span>Phone</span>
+      <input [(ngModel)]="draft.phone" placeholder="+1" />
+    </label>
+    <label>
+      <span>Email</span>
+      <input [(ngModel)]="draft.email" placeholder="email@domain.com" />
+    </label>
+    <label class="full">
+      <span>Address</span>
+      <input [(ngModel)]="draft.address" placeholder="Address" />
+    </label>
+    <label class="full">
+      <span>Emergency Contact</span>
+      <input [(ngModel)]="draft.emergencyContact" placeholder="Name and phone" />
+    </label>
+    <label class="full">
+      <span>Medical History</span>
+      <textarea [(ngModel)]="draft.medicalHistory" rows="3"></textarea>
+    </label>
+  </div>
+
+  <div class="subsection">
+    <h4>Allergy Tracking</h4>
+    <div class="inline-form">
+      <input [(ngModel)]="allergyInput" placeholder="Add allergy" />
+      <button class="btn ghost" type="button" (click)="addAllergy()">Add</button>
+    </div>
+    <div class="chips">
+      @for (allergy of draft.allergies; track allergy) {
+        <button class="chip" type="button" (click)="removeAllergy(allergy)">{{ allergy }} x</button>
+      }
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h4>Chronic Condition Tagging</h4>
+    <div class="conditions">
+      @for (condition of chronicOptions; track condition) {
+        <label class="check">
+          <input
+            type="checkbox"
+            [checked]="isConditionChecked(condition)"
+            (change)="toggleChronic(condition, $any($event.target).checked)"
+          />
+          <span>{{ condition }}</span>
+        </label>
+      }
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h4>Consent Capture</h4>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="draft.consentTreatment" />
+      <span>Treatment Consent</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="draft.consentRemoteCare" />
+      <span>Remote Care Consent</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" [(ngModel)]="draft.consentDataUse" />
+      <span>Data Use Consent</span>
+    </label>
+  </div>
+
+  <div class="subsection">
+    <h4>Document Upload</h4>
+    <input type="file" multiple (change)="onDocumentsSelected($event)" />
+    <ul class="doc-list">
+      @for (doc of draft.documents; track doc) {
+        <li>
+          <span>{{ doc }}</span>
+          <button type="button" (click)="removeDocument(doc)">Remove</button>
+        </li>
+      }
+    </ul>
+  </div>
+
+  <button class="btn primary" type="button" (click)="savePatient()">Save Patient</button>
+</section>

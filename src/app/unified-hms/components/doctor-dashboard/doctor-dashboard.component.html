@@ -1,0 +1,176 @@
+<section class="doctor-shell">
+  @if (activeMainTab === 'dashboard') {
+    <header class="doctor-header ios-blur">
+      <div>
+        <p class="head-date">{{ todayLabel }}</p>
+        <h2>Dashboard</h2>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="icon-btn bell-btn" aria-label="Notifications">
+          <span class="bell-dot"></span>
+        </button>
+        <div class="head-profile" aria-label="Profile">{{ initials }}</div>
+      </div>
+    </header>
+
+    @if (criticalAlerts.length > 0) {
+      <section class="critical-banner">
+        <div>
+          <h3>! {{ criticalAlerts.length }} Critical Alerts</h3>
+          <ul>
+            @for (alert of criticalAlerts; track alert.id) {
+              <li>{{ alert.title }} - Patient: {{ alert.patientName }}</li>
+            }
+          </ul>
+        </div>
+        <div class="banner-actions">
+          <button type="button" class="btn-primary" (click)="openCriticalAlerts()">View Now</button>
+          <button type="button" class="btn-ghost" (click)="dismissAlerts()">Dismiss</button>
+        </div>
+      </section>
+    }
+
+    <section class="summary-row">
+      @for (card of summaryCards; track card.id) {
+        <article class="summary-card">
+          <p>{{ card.label }}</p>
+          <strong>{{ card.value }}</strong>
+        </article>
+      }
+    </section>
+
+    <section class="queue-section">
+      <h3>Patient Queue</h3>
+      <nav class="queue-tabs">
+        @for (tab of queueTabs; track tab) {
+          <button type="button" [class.active]="activeQueueTab === tab" (click)="setQueueTab(tab)">
+            {{ tab }} ({{ queueTabCount(tab) }})
+          </button>
+        }
+      </nav>
+
+      <div class="queue-list">
+        @for (item of filteredQueuePatients; track item.id) {
+          <article class="queue-row" [class.emergency]="item.emergencyFlag">
+            <button type="button" class="row-main" (click)="openQueueDetails(item)">
+              <div class="row-avatar">{{ item.patientName.charAt(0) }}</div>
+              <div class="row-info">
+                <h4>{{ item.patientName }}</h4>
+                <p>{{ item.age }}Y / {{ item.condition }}</p>
+                <div class="vitals">
+                  <span [class.high]="isHighBp(item.bp)">BP: {{ item.bp }}</span>
+                  <span [class.warn]="isHighSugar(item.sugar)">Sugar: {{ item.sugar }}</span>
+                </div>
+              </div>
+              <div class="row-right">
+                @if (item.emergencyFlag) {
+                  <span class="em-badge">EMERGENCY</span>
+                }
+                <span class="arrow">></span>
+              </div>
+            </button>
+
+            <button type="button" class="quick-toggle" (click)="toggleQueueActions(item.id)">
+              Quick Actions
+            </button>
+            @if (isQueueActionsOpen(item.id)) {
+              <div class="quick-actions">
+                <button type="button">Call</button>
+                <button type="button">Start Teleconsult</button>
+                <button type="button" (click)="openQueueDetails(item)">View Details</button>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="risk-section">
+      <h3>High-Risk Remote Patients</h3>
+      <div class="risk-list">
+        @for (risk of highRiskPatients; track risk.id) {
+          <article class="risk-card">
+            <h4>{{ risk.name }}</h4>
+            <p>Care Plan: {{ risk.carePlan }}</p>
+            <p>Last Visit: {{ risk.lastVisit }}</p>
+            <div class="risk-meter">
+              <span>Risk Score: {{ risk.riskScore }}%</span>
+              <div class="bar">
+                <div class="fill" [style.width]="riskBarWidth(risk.riskScore)"></div>
+              </div>
+            </div>
+            <div class="risk-actions">
+              <button type="button">Review Now</button>
+              <button type="button">Start Teleconsult</button>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section class="care-section">
+      <h3>Care Program Snapshot</h3>
+      <div class="program-list">
+        @for (program of carePrograms; track program.id) {
+          <article>
+            <div class="prog-head">
+              <span>{{ program.name }}</span>
+              <strong>{{ program.count }}</strong>
+            </div>
+            <div class="prog-bar">
+              <div class="prog-fill" [style.width]="careProgramBarWidth(program.count)"></div>
+            </div>
+          </article>
+        }
+      </div>
+      <button type="button" class="btn-ghost">View All Care Plans</button>
+    </section>
+  }
+
+  @if (activeMainTab === 'patients') {
+    <app-module-patient-registration
+      [patients]="patients"
+      [selectedPatientId]="selectedPatientId"
+      (selectedPatientIdChange)="selectedPatientId = $event"
+      (patientSaved)="onPatientSaved($event)"
+    />
+  }
+
+  @if (activeMainTab === 'schedule') {
+    <app-module-appointment-queue [patients]="patients" />
+  }
+
+  @if (activeMainTab === 'reports') {
+    <article class="placeholder"><h3>Reports</h3><p>Reports dashboard placeholder.</p></article>
+  }
+
+  @if (activeMainTab === 'settings') {
+    <article class="placeholder"><h3>Settings</h3><p>Settings placeholder.</p></article>
+  }
+
+  <nav class="bottom-nav ios-blur">
+    <button type="button" [class.active]="activeMainTab === 'dashboard'" (click)="setMainTab('dashboard')">
+      <span class="nav-ico">DB</span><small>Home</small>
+    </button>
+    <button type="button" [class.active]="activeMainTab === 'patients'" (click)="setMainTab('patients')">
+      <span class="nav-ico">PT</span><small>Patients</small>
+    </button>
+    <div class="center-plus-wrap">
+      @if (showFabMenu) {
+        <div class="fab-menu">
+          <button type="button" (click)="quickAction('consult')">New Consultation</button>
+          <button type="button" (click)="quickAction('walkin')">Add Walk-in</button>
+          <button type="button" (click)="quickAction('tele')">Start Teleconsult</button>
+          <button type="button" (click)="quickAction('care')">Assign Care Plan</button>
+        </div>
+      }
+      <button type="button" class="center-plus" (click)="toggleFabMenu()">+</button>
+    </div>
+    <button type="button" [class.active]="activeMainTab === 'schedule'" (click)="setMainTab('schedule')">
+      <span class="nav-ico">SC</span><small>Calendar</small>
+    </button>
+    <button type="button" [class.active]="activeMainTab === 'settings'" (click)="setMainTab('settings')">
+      <span class="nav-ico">ST</span><small>Settings</small>
+    </button>
+  </nav>
+</section>

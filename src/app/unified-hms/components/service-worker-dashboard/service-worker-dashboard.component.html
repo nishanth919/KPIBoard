@@ -1,0 +1,30 @@
+<section class="sw-shell">
+  <header>
+    <p class="eyebrow">Service Worker Dashboard</p>
+    <h2>Field Visits</h2>
+  </header>
+
+  <div class="stats">
+    <article>
+      <span>Assigned Cases</span>
+      <strong>{{ visits.length }}</strong>
+    </article>
+    <article>
+      <span>Visits Today</span>
+      <strong>{{ visitsTodayCount }}</strong>
+    </article>
+  </div>
+
+  <section class="list">
+    @for (visit of visits; track visit.patient) {
+      <article class="card" [class.active]="visit.status === 'Active'">
+        <header>
+          <strong>{{ visit.patient }}</strong>
+          <span>{{ visit.status }}</span>
+        </header>
+        <p>{{ visit.condition }} | {{ visit.time }}</p>
+        <small>{{ visit.address }}</small>
+      </article>
+    }
+  </section>
+</section>

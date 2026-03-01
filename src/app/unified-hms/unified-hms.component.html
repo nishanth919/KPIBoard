@@ -1,0 +1,81 @@
+<div class="hms-shell">
+  @if (!loggedIn) {
+    <section class="login-screen">
+      <div class="login-card">
+        <div class="brand">
+          <div class="logo">+</div>
+          <h1>CareSync Unified HMS</h1>
+          <p>Role-specific secure access</p>
+        </div>
+
+        <div class="field-group">
+          <label>Access Level</label>
+          <div class="role-grid">
+            @for (role of roles; track role) {
+              <button
+                type="button"
+                class="role-btn"
+                [class.active]="selectedRole === role"
+                (click)="selectedRole = role"
+              >
+                {{ role }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>{{ selectedRole === 'Patient' ? 'Patient ID' : 'Staff ID' }}</label>
+          <input [(ngModel)]="staffId" placeholder="Enter ID" />
+        </div>
+        <div class="field-group">
+          <label>Password</label>
+          <input [(ngModel)]="password" type="password" placeholder="Enter password" />
+        </div>
+
+        <button class="btn-primary" type="button" (click)="login()">Secure Access</button>
+      </div>
+    </section>
+  }
+
+  @if (loggedIn) {
+    <section class="workspace">
+      @if (isDoctorRole()) {
+        <app-doctor-dashboard />
+      } @else if (selectedRole === 'Service Worker') {
+        <header class="topbar">
+          <div class="topbar-profile">
+            <div class="topbar-avatar">SJ</div>
+            <div>
+              <h2>Sarah Jone</h2>
+              <p>({{ selectedRole }})</p>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" class="icon-btn" aria-label="Notifications">🔔</button>
+            <button type="button" class="icon-btn danger" (click)="logout()" aria-label="Logout">⎋</button>
+          </div>
+        </header>
+        <app-service-worker-dashboard />
+      } @else {
+        <header class="topbar">
+          <div class="topbar-profile">
+            <div class="topbar-avatar">SJ</div>
+            <div>
+              <h2>Sarah Jone</h2>
+              <p>({{ selectedRole }})</p>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" class="icon-btn" aria-label="Notifications">🔔</button>
+            <button type="button" class="icon-btn danger" (click)="logout()" aria-label="Logout">⎋</button>
+          </div>
+        </header>
+        <article class="placeholder">
+          <h3>{{ selectedRole }} Portal</h3>
+          <p>Role login is active. This module shell is ready for child component expansion.</p>
+        </article>
+      }
+    </section>
+  }
+</div>

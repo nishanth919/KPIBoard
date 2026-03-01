@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareSync NCD Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            min-height: 100vh;
+        }
+        .text-2xl {
+            font-size: 1rem !important;
+        }
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+        .login-gradient {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0e7ff 100%);
+        }
+
+        .input-focus:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .ncd-card {
+            transition: all 0.2s ease;
+        }
+        .ncd-card:active {
+            transform: scale(0.98);
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .ai-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <!-- LOGIN SCREEN -->
+    <div id="screen-login" class="login-gradient flex items-center justify-center p-4 min-vh-100 min-h-screen">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl shadow-lg mb-4">
+                    <i class="fas fa-heartbeat text-white text-3xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">CareSync Portal</h1>
+                <p class="text-slate-500 mt-2 font-medium">NCD Management & Senior Care</p>
+            </div>
+
+            <div class="bg-white/95 backdrop-blur-md rounded-3xl p-8 space-y-6 shadow-2xl border border-white/20">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Access Level</label>
+                    <select id="role-select" onchange="setRole(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-700 input-focus transition-all">
+                        <option value="sw">Social Worker</option>
+                        <option value="nurse">Nurse</option>
+                        <option value="doctor">Doctor</option>
+                        <option value="pharmacist">Pharmacist</option>
+                        <option value="lab">Lab Technician</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+
+                <form onsubmit="handleLogin(event)" class="space-y-5">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700 block mb-2">Staff ID</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3.5 text-slate-400"><i class="fas fa-id-badge"></i></span>
+                            <input type="text" id="username" value="SW-7821" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl input-focus transition-all text-slate-800" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700 block mb-2">Password</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3.5 text-slate-400"><i class="fas fa-lock"></i></span>
+                            <input type="password" id="password" value="••••••••" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl input-focus transition-all text-slate-800" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center">
+                        <span>Secure Access</span>
+                        <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                    </button>
+                </form>
+
+                <div class="pt-4 border-t border-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    <i class="fas fa-shield-alt mr-2 text-green-500"></i> HIPAA PROTECTED SYSTEM
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="screen-app" class="hidden min-h-screen bg-slate-50">
+        
+        <!-- 1. HOME TAB (DASHBOARD) -->
+        <div id="tab-home" class="tab-content active pb-24">
+            <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <p id="dashboard-title" class="text-xs font-bold text-blue-600 uppercase tracking-widest">Field Dashboard</p>
+                        <h2 id="dashboard-greeting" class="text-xl font-bold text-slate-800">Hello, Sarah</h2>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <i class="fas fa-bell text-slate-400 text-xl"></i>
+                            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-white font-bold">2</span>
+                        </div>
+                        <button type="button" onclick="logout()" class="text-xs font-bold text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">
+                            Logout
+                        </button>
+                        <div class="w-10 h-10 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" alt="Profile">
+                        </div>
+                    </div>
+                </div>
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
+                    <input id="home-search" type="text" placeholder="Search Patient Name or ID..." class="w-full bg-slate-100 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+            </header>
+
+            <div id="home-sw" class="role-home">
+            <div class="grid grid-cols-2 gap-4 p-6">
+                <div class="bg-blue-600 rounded-3xl p-4 text-white shadow-lg shadow-blue-200">
+                    <p class="text-[10px] font-bold opacity-80 uppercase tracking-wider">Assigned Cases</p>
+                    <h3 class="text-2xl font-bold mt-1">12</h3>
+                </div>
+                <div class="bg-white rounded-3xl p-4 border border-slate-200">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Visits Today</p>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-1">04</h3>
+                </div>
+            </div>
+
+            <div class="px-6 mb-4 flex justify-between items-end">
+                <h3 class="font-bold text-slate-800">Scheduled Visits</h3>
+            </div>
+
+            <div class="px-6 space-y-4">
+                <div onclick="openPatient('John Doe', 'Hypertension', '68', 'Male', '8821', '2023-10-20', 'Dr. Karl John', 'Julie')" class="ncd-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner">
+                                <i class="fas fa-user text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg">John Doe</h4>
+                                <div class="flex items-center text-[10px] text-slate-500 font-medium space-x-2">
+                                    <span>68Y • Male</span>
+                                    <span>•</span>
+                                    <span class="text-blue-600 font-bold">ID: 8821</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[9px] font-bold bg-orange-50 text-orange-600 px-2 py-1 rounded-full uppercase tracking-tighter">Priority</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-slate-50 p-2 rounded-xl">
+                            <p class="text-[9px] text-slate-400 uppercase font-bold">Current Disease</p>
+                            <p class="text-xs font-semibold text-slate-700">Hypertension</p>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded-xl">
+                            <p class="text-[9px] text-slate-400 uppercase font-bold">Last Visit</p>
+                            <p class="text-xs font-semibold text-slate-700">Oct 20, 2023</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div onclick="openPatient('Robert Smith', 'Diabetes', '72', 'Male', '9022', '2023-10-15', 'Dr. Karl John', 'Julie')" class="ncd-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner">
+                                <i class="fas fa-user text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-lg">Robert Smith</h4>
+                                <div class="flex items-center text-[10px] text-slate-500 font-medium space-x-2">
+                                    <span>72Y • Male</span>
+                                    <span>•</span>
+                                    <span class="text-blue-600 font-bold">ID: 9022</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[9px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-full uppercase tracking-tighter">Scheduled</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <div id="home-doctor" class="role-home hidden p-6 space-y-6">
+                <h3 class="text-2xl font-bold text-slate-800">Critical Alerts</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white border border-rose-100 rounded-3xl p-5 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold bg-rose-100 text-rose-600 px-2 py-1 rounded-full uppercase">SOS</span>
+                            <span class="text-xs text-slate-400">2m ago</span>
+                        </div>
+                        <h4 class="text-2xl font-bold text-slate-800">Robert Chen</h4>
+                        <p class="text-red-500 font-semibold mt-1">High BP Alert: 182/110 mmHg</p>
+                        <p class="text-xs text-slate-500">Remote Service Worker: Sarah M.</p>
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <button class="bg-red-600 text-white font-bold py-2 rounded-xl">Call Agent</button>
+                            <button class="bg-slate-100 text-slate-600 font-bold py-2 rounded-xl">View Data</button>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-amber-100 rounded-3xl p-5 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-1 rounded-full uppercase">Review</span>
+                            <span class="text-xs text-slate-400">15m ago</span>
+                        </div>
+                        <h4 class="text-2xl font-bold text-slate-800">Maria Garcia</h4>
+                        <p class="text-orange-600 font-semibold mt-1">Lab Result: HbA1c 9.2%</p>
+                        <p class="text-xs text-slate-500">Uncontrolled Diabetic Flow</p>
+                        <button class="w-full mt-4 bg-blue-600 text-white font-bold py-2 rounded-xl">Update Meds</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-blue-600 text-white rounded-2xl p-4">
+                        <p class="text-[10px] uppercase opacity-80 font-bold">Patient Visited</p>
+                        <h4 class="text-2xl font-bold mt-1">29</h4>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <p class="text-[10px] uppercase text-slate-400 font-bold">Live Waiting</p>
+                        <h4 class="text-2xl font-bold text-slate-800 mt-1">11</h4>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <p class="text-[10px] uppercase text-slate-400 font-bold">Virtual Waiting</p>
+                        <h4 class="text-2xl font-bold text-slate-800 mt-1">7</h4>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4">Active Care Plans</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-2 gap-4">
+                        <div class="rounded-3xl p-6 text-white bg-gradient-to-br from-indigo-500 to-blue-600">
+                            <i class="fas fa-baby text-2xl mb-4"></i>
+                            <h4 class="text-2xl font-bold">Maternity</h4>
+                            <p class="text-sm opacity-90">12 Patients Active</p>
+                        </div>
+                        <div class="rounded-3xl p-6 text-white bg-gradient-to-br from-emerald-500 to-teal-600">
+                            <i class="fas fa-heartbeat text-2xl mb-4"></i>
+                            <h4 class="text-2xl font-bold">Cardiology</h4>
+                            <p class="text-sm opacity-90">8 Patients Active</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="home-nurse" class="role-home hidden p-6 space-y-6">
+                <h3 class="text-2xl font-bold text-slate-800">Critical Alerts</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white border border-rose-100 rounded-3xl p-5 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold bg-rose-100 text-rose-600 px-2 py-1 rounded-full uppercase">SOS</span>
+                            <span class="text-xs text-slate-400">5m ago</span>
+                        </div>
+                        <h4 class="text-2xl font-bold text-slate-800">John Doe</h4>
+                        <p class="text-red-500 font-semibold mt-1">Pulse Ox Drop: 88%</p>
+                        <p class="text-xs text-slate-500">Escalated by Social Worker: Sarah</p>
+                        <div class="grid grid-cols-2 gap-2 mt-4">
+                            <button class="bg-red-600 text-white font-bold py-2 rounded-xl">Call Patient</button>
+                            <button class="bg-slate-100 text-slate-600 font-bold py-2 rounded-xl">View Vitals</button>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-amber-100 rounded-3xl p-5 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-1 rounded-full uppercase">Review</span>
+                            <span class="text-xs text-slate-400">20m ago</span>
+                        </div>
+                        <h4 class="text-2xl font-bold text-slate-800">Maria Garcia</h4>
+                        <p class="text-orange-600 font-semibold mt-1">Medication Adherence: Low</p>
+                        <p class="text-xs text-slate-500">Follow-up nursing intervention</p>
+                        <button class="w-full mt-4 bg-blue-600 text-white font-bold py-2 rounded-xl">Start Follow-up</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-blue-600 text-white rounded-2xl p-4">
+                        <p class="text-[10px] uppercase opacity-80 font-bold">Patient Visited</p>
+                        <h4 class="text-2xl font-bold mt-1">17</h4>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <p class="text-[10px] uppercase text-slate-400 font-bold">Live Waiting</p>
+                        <h4 class="text-2xl font-bold text-slate-800 mt-1">9</h4>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <p class="text-[10px] uppercase text-slate-400 font-bold">Virtual Waiting</p>
+                        <h4 class="text-2xl font-bold text-slate-800 mt-1">5</h4>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4">Active Care Plans</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="rounded-3xl p-6 text-white bg-gradient-to-br from-indigo-500 to-blue-600">
+                            <i class="fas fa-baby text-2xl mb-4"></i>
+                            <h4 class="text-2xl font-bold">Maternity</h4>
+                            <p class="text-sm opacity-90">10 Patients Active</p>
+                        </div>
+                        <div class="rounded-3xl p-6 text-white bg-gradient-to-br from-emerald-500 to-teal-600">
+                            <i class="fas fa-heartbeat text-2xl mb-4"></i>
+                            <h4 class="text-2xl font-bold">Cardiology</h4>
+                            <p class="text-sm opacity-90">6 Patients Active</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CASES TAB -->
+        <div id="tab-cases" class="tab-content pb-24">
+            <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+                <h2 class="text-xl font-bold text-slate-800">My Cases</h2>
+                <div class="flex space-x-2 mt-4 overflow-x-auto pb-2 no-scrollbar">
+                    <button class="bg-blue-600 text-white text-[10px] font-bold uppercase px-4 py-2 rounded-full whitespace-nowrap">All</button>
+                    <button class="bg-slate-100 text-slate-500 text-[10px] font-bold uppercase px-4 py-2 rounded-full whitespace-nowrap">Open</button>
+                    <button class="bg-slate-100 text-slate-500 text-[10px] font-bold uppercase px-4 py-2 rounded-full whitespace-nowrap">Escalated</button>
+                </div>
+            </header>
+
+            <div class="p-6 space-y-4">
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <p class="text-[10px] font-bold text-blue-600 uppercase mb-1">Case #89212</p>
+                            <h4 class="font-bold text-slate-800">Maria Garcia</h4>
+                            <p class="text-[10px] text-slate-400">75Y • Female • Diabetes</p>
+                        </div>
+                        <span class="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-1 rounded-md uppercase">Escalated</span>
+                    </div>
+                    <div class="flex items-center text-xs text-slate-500 space-x-4 mb-4">
+                        <span><i class="far fa-clock mr-1"></i> 2h ago</span>
+                        <span><i class="fas fa-user-md mr-1"></i> Dr. House</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. ROUTE TAB -->
+          <div id="tab-route" class="tab-content pb-24">
+            <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+                <div class="flex justify-between items-center">
+                    <h2 id="route-tab-title" class="text-xl font-bold text-slate-800">Today's Route</h2>
+                    <span id="route-tab-action" class="text-xs font-bold text-blue-600"><i class="fas fa-directions mr-1"></i> Start Nav</span>
+                </div>
+                <div id="route-summary" class="mt-4 bg-slate-50 p-3 rounded-2xl flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <p class="text-xs font-medium text-slate-600">4 Stops • 18 mi • Est. 45m driving</p>
+                </div>
+            </header>
+
+            <div id="route-content-sw" class="p-6 relative role-route">
+                <div class="absolute left-10 top-10 bottom-10 w-0.5 bg-blue-100 z-0"></div>
+                <div class="space-y-8">
+                    <div class="flex items-start space-x-6 relative z-10">
+                        <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold shadow-lg">1</div>
+                        <div class="flex-1 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+                            <div class="flex justify-between"><h4 class="font-bold text-slate-800">John Doe</h4><span class="text-[10px] text-slate-400">09:30 AM</span></div>
+                            <p class="text-xs text-slate-500 mt-1">123 West Adams St, Apt 4B</p>
+                            <span class="mt-2 inline-block text-[9px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Arrived</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-6 relative z-10">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-lg">2</div>
+                        <div class="flex-1 bg-white p-4 rounded-3xl border-2 border-blue-600 shadow-md">
+                            <div class="flex justify-between"><h4 class="font-bold text-slate-800">Robert Smith</h4><span class="text-[10px] text-blue-600">Active</span></div>
+                            <p class="text-xs text-slate-500 mt-1">455 S Broadway Blvd</p>
+                            <button class="mt-3 w-full bg-blue-600 text-white text-[10px] font-bold py-2 rounded-xl">Check In Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="route-content-clinical" class="p-6 space-y-4 hidden role-route">
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-slate-800">Robert Chen</h4>
+                            <p class="text-xs text-slate-500">Room 205 • Critical Review</p>
+                        </div>
+                        <span class="text-[10px] font-bold bg-red-50 text-red-600 px-2 py-1 rounded-full">Priority</span>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-slate-800">Maria Garcia</h4>
+                            <p class="text-xs text-slate-500">Ward B • Follow-up</p>
+                        </div>
+                        <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-full">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. SCHEDULE TAB -->
+        <div id="tab-schedule" class="tab-content pb-24">
+            <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+                <h2 id="schedule-tab-title" class="text-xl font-bold text-slate-800">Settings</h2>
+            </header>
+            <div id="schedule-content-generic" class="p-6">
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <p class="text-sm text-slate-600">Settings content placeholder.</p>
+                </div>
+            </div>
+            <div id="schedule-content-clinical" class="p-6 space-y-4 hidden">
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between">
+                        <h4 class="font-bold text-slate-800">09:00 AM - Morning Rounds</h4>
+                        <span class="text-[10px] text-slate-400">Ward A</span>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between">
+                        <h4 class="font-bold text-slate-800">11:30 AM - Tele Consult</h4>
+                        <span class="text-[10px] text-slate-400">Virtual</span>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between">
+                        <h4 class="font-bold text-slate-800">03:00 PM - Care Plan Review</h4>
+                        <span class="text-[10px] text-slate-400">OPD Block</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAB -->
+        <button onclick="openForm('Adhoc')" class="fixed right-6 bottom-24 w-14 h-14 bg-blue-600 rounded-2xl text-white shadow-xl shadow-blue-300 flex items-center justify-center z-20">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 glass-nav h-20 px-8 flex items-center justify-between z-10 safe-area-bottom">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex flex-col items-center text-blue-600">
+                <i class="fas fa-home text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Home</span>
+            </button>
+            <button onclick="switchTab('cases')" id="nav-cases" class="nav-btn flex flex-col items-center text-slate-400">
+                <i class="fas fa-folder-open text-lg"></i>
+                <span class="text-[10px] font-bold mt-1">Cases</span>
+            </button>
+            <button onclick="switchTab('route')" id="nav-route" class="nav-btn flex flex-col items-center text-slate-400">
+                <i id="nav-route-icon" class="fas fa-map-marker-alt text-lg"></i>
+                <span id="nav-route-label" class="text-[10px] font-bold mt-1">Route</span>
+            </button>
+            <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-btn flex flex-col items-center text-slate-400">
+                <i id="nav-settings-icon" class="fas fa-cog text-lg"></i>
+                <span id="nav-settings-label" class="text-[10px] font-bold mt-1">Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- VISIT FORM MODAL -->
+    <div id="screen-form" class="hidden fixed inset-0 z-50 bg-white overflow-y-auto">
+        <header class="bg-white border-b sticky top-0 p-4 flex items-center justify-between">
+            <button onclick="closeForm()" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            <h3 class="font-bold text-slate-800">Clinical Field Encounter</h3>
+            <div class="w-10"></div>
+        </header>
+
+        <div class="p-6 pb-40 space-y-6">
+            <!-- Patient Quick Info -->
+            <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 id="form-patient-name" class="font-bold text-slate-800">New Adhoc Case</h4>
+                        <div id="form-patient-details" class="text-[10px] text-slate-400 font-medium flex space-x-2 mt-1 uppercase tracking-wider">
+                            <span>Pending Assignment</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Type of Visit</label>
+                    <select id="visit-type" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
+                        <option value="routine">Routine Follow-up</option>
+                        <option value="adhoc">Adhoc Emergency Visit</option>
+                        <option value="screening">Screening</option>
+                        <option value="medication">Medication Adjustment</option>
+                    </select>
+                </div>
+
+                <h2 class="text-sm font-bold text-slate-800 uppercase tracking-widest pt-2 flex items-center">
+                    <i class="fas fa-vials mr-2 text-blue-600"></i> Clinical Vitals
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">BP (mmHg)</label>
+                        <input type="text" id="vital-bp" placeholder="120/80" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Glucose (mg/dL)</label>
+                        <input type="number" id="vital-glucose" placeholder="95" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Heart Rate (bpm)</label>
+                        <input type="number" id="vital-hr" placeholder="72" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Temperature (°F)</label>
+                        <input type="text" id="vital-temp" placeholder="98.6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Pulse Ox (%)</label>
+                        <input type="number" id="vital-pulse" placeholder="98" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Weight (kg)</label>
+                        <input type="text" id="vital-weight" placeholder="70.5" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Medicine Continuation</label>
+                    <select class="w-full bg-white border-2 border-slate-800 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option>Continue Current Medications</option>
+                        <option>Discontinue All</option>
+                        <option>Update Dosage</option>
+                        <option>Add New Prescription</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Attachments (Photos)</label>
+                    <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center bg-slate-50 cursor-pointer hover:border-blue-400 transition-colors">
+                        <i class="fas fa-camera text-slate-400 text-3xl mb-2"></i>
+                        <span class="text-sm font-semibold text-slate-600">Tap to add photos</span>
+                        <span class="text-[10px] text-slate-400">Max 5MB per file</span>
+                    </div>
+                    <div class="flex space-x-3 mt-4">
+                        <div class="relative w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold border">
+                            Img1
+                            <button class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="relative w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold border">
+                            Img2
+                            <button class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Assigned Section -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mt-4">
+                    <p class="text-[11px] font-bold text-slate-800 mb-3">Auto-Assigned (from previous visit)</p>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold">Nurse</p>
+                                <p id="form-nurse-name" class="text-sm font-semibold text-slate-700">Julie Anderson</p>
+                            </div>
+                            <button class="text-[10px] font-bold border border-teal-500 text-teal-600 px-3 py-1 rounded-lg">Change</button>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold">Doctor</p>
+                                <p id="form-doctor-name" class="text-sm font-semibold text-slate-700">Dr. Karl John</p>
+                            </div>
+                            <button class="text-[10px] font-bold border border-teal-500 text-teal-600 px-3 py-1 rounded-lg">Change</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Field Observations</label>
+                    <textarea id="visit-notes" placeholder="Note symptoms, compliance, or mobility issues..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm h-32 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-0 left-0 right-0 p-6 bg-white border-t safe-area-bottom" style="position: sticky;">
+            <button onclick="submitCase()" id="submitBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-[0.98]">
+                Submit Encounter Report
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "";
+        let selectedRole = 'sw';
+        const roleLabels = {
+            sw: 'Social Worker',
+            nurse: 'Nurse',
+            doctor: 'Doctor',
+            pharmacist: 'Pharmacist',
+            lab: 'Lab Technician',
+            admin: 'Admin'
+        };
+        let currentPatient = {};
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Initializing...';
+            setTimeout(() => {
+                document.getElementById('screen-login').classList.add('hidden');
+                applyRoleUI(selectedRole);
+                document.getElementById('screen-app').classList.remove('hidden');
+                btn.innerHTML = '<span>Secure Access</span><i class="fas fa-arrow-right ml-2 text-sm"></i>';
+            }, 800);
+        }
+
+        function applyRoleUI(role) {
+            const greeting = document.getElementById('dashboard-greeting');
+            const title = document.getElementById('dashboard-title');
+            const routeLabel = document.getElementById('nav-route-label');
+            const routeIcon = document.getElementById('nav-route-icon');
+            const settingsLabel = document.getElementById('nav-settings-label');
+            const settingsIcon = document.getElementById('nav-settings-icon');
+            const routeTitle = document.getElementById('route-tab-title');
+            const routeAction = document.getElementById('route-tab-action');
+            const routeSummary = document.getElementById('route-summary');
+            const scheduleTitle = document.getElementById('schedule-tab-title');
+            const searchInput = document.getElementById('home-search');
+            const isClinicalRole = role === 'doctor' || role === 'nurse';
+
+            if (role === 'doctor') {
+                greeting.innerText = 'Hello, Dr. Karl John';
+                title.innerText = 'Doctor Dashboard';
+                routeLabel.innerText = 'Patients';
+                routeIcon.className = 'fas fa-users text-lg';
+                settingsLabel.innerText = 'Schedule';
+                settingsIcon.className = 'fas fa-calendar-alt text-lg';
+            } else if (role === 'nurse') {
+                greeting.innerText = 'Hello, Julie';
+                title.innerText = 'Nurse Dashboard';
+                routeLabel.innerText = 'Patients';
+                routeIcon.className = 'fas fa-users text-lg';
+                settingsLabel.innerText = 'Schedule';
+                settingsIcon.className = 'fas fa-calendar-alt text-lg';
+            } else {
+                if (role === 'sw') {
+                    greeting.innerText = 'Hello, Sarah';
+                    title.innerText = 'Field Dashboard';
+                } else {
+                    greeting.innerText = `Hello, ${roleLabels[role] || 'Team Member'}`;
+                    title.innerText = `${roleLabels[role] || 'Role'} Dashboard`;
+                }
+                routeLabel.innerText = 'Route';
+                routeIcon.className = 'fas fa-map-marker-alt text-lg';
+                settingsLabel.innerText = 'Settings';
+                settingsIcon.className = 'fas fa-cog text-lg';
+            }
+
+            if (isClinicalRole) {
+                routeTitle.innerText = 'Assigned Patients';
+                routeAction.innerHTML = '<i class="fas fa-users mr-1"></i> View All';
+                routeSummary.classList.add('hidden');
+                scheduleTitle.innerText = 'Schedule';
+                searchInput.placeholder = 'Search Patient Name or MRN...';
+            } else {
+                routeTitle.innerText = "Today's Route";
+                routeAction.innerHTML = '<i class="fas fa-directions mr-1"></i> Start Nav';
+                routeSummary.classList.remove('hidden');
+                scheduleTitle.innerText = 'Settings';
+                searchInput.placeholder = 'Search Patient Name or ID...';
+            }
+
+            document.getElementById('home-sw').classList.toggle('hidden', isClinicalRole);
+            document.getElementById('home-doctor').classList.toggle('hidden', role !== 'doctor');
+            document.getElementById('home-nurse').classList.toggle('hidden', role !== 'nurse');
+            document.getElementById('route-content-sw').classList.toggle('hidden', isClinicalRole);
+            document.getElementById('route-content-clinical').classList.toggle('hidden', !isClinicalRole);
+            document.getElementById('schedule-content-generic').classList.toggle('hidden', isClinicalRole);
+            document.getElementById('schedule-content-clinical').classList.toggle('hidden', !isClinicalRole);
+        }
+
+        function logout() {
+            document.getElementById('screen-form').classList.add('hidden');
+            document.getElementById('screen-app').classList.add('hidden');
+            document.getElementById('screen-login').classList.remove('hidden');
+            switchTab('home');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.replace('text-blue-600', 'text-slate-400'));
+            document.getElementById(`nav-${tabId}`).classList.replace('text-slate-400', 'text-blue-600');
+            window.scrollTo(0, 0);
+        }
+
+        function openForm(type = 'Routine') {
+            const form = document.getElementById('screen-form');
+            const typeSelect = document.getElementById('visit-type');
+            
+            if (type === 'Adhoc') {
+                typeSelect.value = 'adhoc';
+                document.getElementById('form-patient-name').innerText = "New Adhoc Case";
+                document.getElementById('form-patient-details').innerHTML = "<span>Assigning location and provider...</span>";
+            }
+            
+            form.classList.remove('hidden');
+            form.style.animation = 'slideUp 0.3s ease-out forwards';
+        }
+
+        function openPatient(name, disease, age, gender, id, lastVisit, doc, nurse) {
+            currentPatient = { name, disease, age, gender, id, lastVisit, doc, nurse };
+            
+            document.getElementById('form-patient-name').innerText = name;
+            document.getElementById('form-doctor-name').innerText = doc || "Dr. Karl John";
+            document.getElementById('form-nurse-name').innerText = nurse || "Julie";
+            document.getElementById('form-patient-details').innerHTML = `
+                <span>${age}Y</span><span>•</span>
+                <span>${gender}</span><span>•</span>
+                <span>ID: ${id}</span><span>•</span>
+                <span class="text-blue-600 font-bold">${disease}</span>
+            `;
+            
+            openForm('Routine');
+        }
+
+        function closeForm() {
+            document.getElementById('screen-form').classList.add('hidden');
+        }
+
+        function submitCase() {
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Syncing Data...';
+            setTimeout(() => {
+                btn.innerHTML = 'Encounter Saved';
+                btn.classList.replace('bg-blue-600', 'bg-green-500');
+                setTimeout(() => {
+                    closeForm();
+                    switchTab('cases');
+                    btn.classList.replace('bg-green-500', 'bg-blue-600');
+                    btn.innerHTML = 'Submit Encounter Report';
+                }, 1000);
+            }, 1000);
+        }
+
+        function setRole(role) {
+            selectedRole = role;
+        }
+    </script>
+</body>
+</html>

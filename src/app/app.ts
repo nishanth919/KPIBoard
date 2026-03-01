@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
-import { GlbHmsComponent } from './glb-hms/glb-hms';
-
+import { MockupV1Component } from './plainForm/mockup-v1.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [GlbHmsComponent],
+  imports: [MockupV1Component],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

@@ -1,0 +1,125 @@
+<section class="panel">
+  <p class="eyebrow">4.2</p>
+  <h3>Appointment & Queue Management</h3>
+
+  <div class="card">
+    <h4>4.2.1 Time-Slot Management</h4>
+    <div class="grid">
+      <input [(ngModel)]="newSlot.doctorName" placeholder="Doctor name" />
+      <input [(ngModel)]="newSlot.location" placeholder="Location" />
+      <input type="date" [(ngModel)]="newSlot.date" />
+      <input type="time" [(ngModel)]="newSlot.startTime" />
+      <input type="number" [(ngModel)]="newSlot.durationMinutes" placeholder="Duration mins" />
+      <label class="check">
+        <input type="checkbox" [(ngModel)]="newSlot.teleconsult" />
+        Teleconsult
+      </label>
+      <label class="check">
+        <input type="checkbox" [(ngModel)]="newSlot.overbookingAllowed" />
+        Overbooking Allowed
+      </label>
+    </div>
+    <button class="btn ghost" type="button" (click)="addSlot()">Add Slot</button>
+    <div class="slot-list">
+      @for (slot of slots; track slot.id) {
+        <div class="slot-item">
+          <strong>{{ slot.doctorName }}</strong>
+          <span>{{ slot.date }} {{ slot.startTime }} | {{ slot.location }}</span>
+          <span>{{ slot.durationMinutes }} min | {{ slot.teleconsult ? 'Tele' : 'In-person' }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>4.2.2 Token-Based Queue</h4>
+    <div class="inline">
+      <select [(ngModel)]="selectedPatientId">
+        <option value="">Select patient</option>
+        @for (patient of patients; track patient.id) {
+          <option [value]="patient.id">{{ patient.fullName }} ({{ patient.id }})</option>
+        }
+      </select>
+      <select [(ngModel)]="selectedQueueType">
+        <option value="Walk-in">Walk-in</option>
+        <option value="Appointment">Appointment</option>
+        <option value="Emergency">Emergency</option>
+      </select>
+      <button class="btn ghost" type="button" (click)="addToQueue()">Generate Token</button>
+    </div>
+  </div>
+
+  <div class="queue-grid">
+    <div class="card">
+      <h4>Walk-in Queue</h4>
+      @for (entry of queueByType('Walk-in'); track entry.id) {
+        <article class="queue-item">
+          <header>
+            <strong>{{ entry.token }} - {{ entry.patientName }}</strong>
+            <span>{{ entry.status }}</span>
+          </header>
+          <div class="actions">
+            <button type="button" (click)="markInProgress(entry.id)">Start</button>
+            <button type="button" (click)="markDone(entry.id)">Done</button>
+            <button type="button" (click)="markNoShow(entry.id)">No-Show</button>
+            <button class="danger" type="button" (click)="flagEmergency(entry.id)">Emergency</button>
+          </div>
+        </article>
+      }
+    </div>
+
+    <div class="card">
+      <h4>Appointment Queue</h4>
+      @for (entry of queueByType('Appointment'); track entry.id) {
+        <article class="queue-item">
+          <header>
+            <strong>{{ entry.token }} - {{ entry.patientName }}</strong>
+            <span>{{ entry.status }}</span>
+          </header>
+          <p class="warn" *ngIf="repeatOffender(entry)">Repeat no-show offender</p>
+          <div class="actions">
+            <button type="button" (click)="markInProgress(entry.id)">Start</button>
+            <button type="button" (click)="markDone(entry.id)">Done</button>
+            <button type="button" (click)="markNoShow(entry.id)">No-Show</button>
+            <button class="danger" type="button" (click)="flagEmergency(entry.id)">Emergency</button>
+          </div>
+        </article>
+      }
+    </div>
+
+    <div class="card">
+      <h4>Emergency Queue</h4>
+      @for (entry of queueByType('Emergency'); track entry.id) {
+        <article class="queue-item emergency">
+          <header>
+            <strong>{{ entry.token }} - {{ entry.patientName }}</strong>
+            <span>{{ entry.status }}</span>
+          </header>
+          <div class="actions">
+            <button type="button" (click)="markInProgress(entry.id)">Start</button>
+            <button type="button" (click)="markDone(entry.id)">Done</button>
+            <button type="button" (click)="markNoShow(entry.id)">No-Show</button>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>4.2.3 Auto-Rescheduling</h4>
+    <div class="inline">
+      <input [(ngModel)]="cancellationDoctor" placeholder="Doctor name" />
+      <input [(ngModel)]="cancellationReason" placeholder="Cancellation reason" />
+      <button class="btn ghost" type="button" (click)="autoReschedule()">Run Auto-Reschedule</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4>Notification Log</h4>
+    <ul class="log-list">
+      @for (log of notificationLog; track log) {
+        <li>{{ log }}</li>
+      }
+    </ul>
+  </div>
+</section>

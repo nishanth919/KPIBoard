@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UnifiedCare iOS - Doctor Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F2F2F7; /* iOS System Gray 6 */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .sos-pulse {
+            animation: ios-pulse 2s infinite;
+        }
+
+        @keyframes ios-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Hide scrollbars for a clean iOS look */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .active-tab { color: #007AFF; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- iOS Status Bar Area / Header -->
+    <header class="ios-blur sticky top-0 z-50 px-5 pt-12 pb-4 border-b border-gray-200">
+        <div class="flex justify-between items-end">
+            <div>
+                <p class="text-[13px] font-semibold text-gray-500 uppercase tracking-tight">Monday, Feb 24</p>
+                <h1 class="text-3xl font-bold tracking-tight text-black">Dashboard</h1>
+            </div>
+            <div class="flex gap-4 mb-1">
+                <button class="relative">
+                    <i class="fa-regular fa-bell text-2xl text-blue-600"></i>
+                    <span class="absolute top-0 right-0 bg-red-500 w-2.5 h-2.5 rounded-full border-2 border-white"></span>
+                </button>
+                <img src="https://ui-avatars.com/api/?name=Sarah+Jenkins&background=007AFF&color=fff" class="w-8 h-8 rounded-full" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- Scrollable Content Area -->
+    <main class="flex-1 overflow-y-auto no-scrollbar pb-32">
+        
+        <!-- Emergency Section (Horizontal Scroll) -->
+        <section class="mt-6 px-5">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-bold text-black">Critical Alerts</h2>
+                <span class="text-sm text-blue-600 font-medium">View All</span>
+            </div>
+            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                <!-- SOS Card 1 -->
+                <div class="min-w-[280px] bg-white rounded-2xl p-4 shadow-sm border border-red-100 sos-pulse">
+                    <div class="flex justify-between items-start">
+                        <span class="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">SOS</span>
+                        <span class="text-xs text-gray-400">2m ago</span>
+                    </div>
+                    <h3 class="mt-3 font-bold text-gray-900 text-lg">Robert Chen</h3>
+                    <p class="text-sm text-red-600 font-medium leading-tight mt-1">
+                        High BP Alert: 182/110 mmHg<br>
+                        <span class="text-gray-400 font-normal text-xs">Remote Service Worker: Sarah M.</span>
+                    </p>
+                    <div class="flex gap-2 mt-4">
+                        <button class="flex-1 bg-red-600 text-white py-2 rounded-xl text-sm font-bold">Call Agent</button>
+                        <button class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-xl text-sm font-bold">View Data</button>
+                    </div>
+                </div>
+
+                <!-- SOS Card 2 -->
+                <div class="min-w-[280px] bg-white rounded-2xl p-4 shadow-sm border border-orange-100">
+                    <div class="flex justify-between items-start">
+                        <span class="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Review</span>
+                        <span class="text-xs text-gray-400">15m ago</span>
+                    </div>
+                    <h3 class="mt-3 font-bold text-gray-900 text-lg">Maria Garcia</h3>
+                    <p class="text-sm text-orange-600 font-medium leading-tight mt-1">
+                        Lab Result: HbA1c 9.2%<br>
+                        <span class="text-gray-400 font-normal text-xs">Uncontrolled Diabetic Flow</span>
+                    </p>
+                    <div class="flex gap-2 mt-4">
+                        <button class="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-bold">Update Meds</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Clinical Queue Section -->
+        <section class="mt-8 px-5">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-black">Clinic Queue (4)</h2>
+                <div class="flex bg-gray-200 p-0.5 rounded-lg">
+                    <button class="px-3 py-1 bg-white shadow-sm rounded-md text-[11px] font-bold">IN-PERSON</button>
+                    <button class="px-3 py-1 text-gray-500 text-[11px] font-bold">VIRTUAL</button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <!-- Patient Row -->
+                <div class="bg-white rounded-2xl p-4 flex items-center gap-4 border border-gray-100 shadow-sm active:bg-gray-50 transition-colors">
+                    <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-lg">ER</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between">
+                            <h4 class="font-bold text-gray-900">Elena Rodriguez</h4>
+                            <span class="text-xs font-bold text-blue-600">TOKEN #A12</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Wait: 12m • Triage Complete (Room 04)</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 flex items-center gap-4 border border-gray-100 shadow-sm opacity-70">
+                    <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold text-lg">SJ</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between">
+                            <h4 class="font-bold text-gray-900">Samuel L. Jackson</h4>
+                            <span class="text-xs font-bold text-gray-400">TOKEN #A13</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Status: Recording Vitals</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-300 text-sm"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Remote Monitoring Overview -->
+        <section class="mt-8 px-5">
+            <h2 class="text-lg font-bold text-black mb-4">Active Care Plans</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-indigo-600 rounded-2xl p-4 text-white">
+                    <i class="fa-solid fa-baby text-2xl mb-2 opacity-80"></i>
+                    <h4 class="text-sm font-bold">Maternity</h4>
+                    <p class="text-[10px] opacity-80">12 Patients Active</p>
+                    <div class="mt-3 flex -space-x-2">
+                        <img src="https://ui-avatars.com/api/?name=1&bg=fff&color=000" class="w-5 h-5 rounded-full border border-indigo-600">
+                        <img src="https://ui-avatars.com/api/?name=2&bg=fff&color=000" class="w-5 h-5 rounded-full border border-indigo-600">
+                        <div class="w-5 h-5 rounded-full bg-indigo-400 text-[8px] flex items-center justify-center border border-indigo-600">+10</div>
+                    </div>
+                </div>
+                <div class="bg-emerald-600 rounded-2xl p-4 text-white">
+                    <i class="fa-solid fa-heart-pulse text-2xl mb-2 opacity-80"></i>
+                    <h4 class="text-sm font-bold">Cardiology</h4>
+                    <p class="text-[10px] opacity-80">8 Patients Active</p>
+                    <div class="mt-3 flex -space-x-2">
+                        <img src="https://ui-avatars.com/api/?name=3&bg=fff&color=000" class="w-5 h-5 rounded-full border border-emerald-600">
+                        <div class="w-5 h-5 rounded-full bg-emerald-400 text-[8px] flex items-center justify-center border border-emerald-600">+7</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Performance / Billing Widget -->
+        <section class="mt-8 px-5">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-900">Monthly RPM Billing</h3>
+                    <i class="fa-solid fa-chart-line text-blue-600"></i>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Revenue Earned</p>
+                        <p class="text-2xl font-bold text-gray-900">$4,280.00</p>
+                    </div>
+                    <div class="h-10 w-px bg-gray-100"></div>
+                    <div class="flex-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Audit Time</p>
+                        <p class="text-2xl font-bold text-gray-900">12.4 hrs</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- iOS Bottom Navigation Bar -->
+    <nav class="ios-blur fixed bottom-0 w-full border-t border-gray-200 safe-area-bottom px-4 pt-2">
+        <div class="flex justify-around items-center">
+            <button class="flex flex-col items-center gap-1 py-1 active-tab">
+                <i class="fa-solid fa-square-grid-2 text-xl"></i>
+                <span class="text-[10px] font-medium">Home</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 py-1 text-gray-400">
+                <i class="fa-solid fa-users text-xl"></i>
+                <span class="text-[10px] font-medium">Patients</span>
+            </button>
+            <div class="relative -top-6">
+                <button class="bg-blue-600 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white border-4 border-white">
+                    <i class="fa-solid fa-plus text-2xl"></i>
+                </button>
+            </div>
+            <button class="flex flex-col items-center gap-1 py-1 text-gray-400">
+                <i class="fa-solid fa-calendar-days text-xl"></i>
+                <span class="text-[10px] font-medium">Calendar</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 py-1 text-gray-400">
+                <i class="fa-solid fa-gear text-xl"></i>
+                <span class="text-[10px] font-medium">Settings</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Floating Quick Access for Consultations -->
+    <div class="fixed bottom-24 right-5 flex flex-col gap-3">
+        <button class="bg-white w-12 h-12 rounded-full shadow-md border border-gray-100 flex items-center justify-center text-blue-600">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,860 @@
+﻿<div class="overflow-x-hidden">
+  <div class="login-gradient flex items-center justify-center p-4 min-h-screen" [class.hidden]="loggedIn">
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl shadow-lg mb-4">
+          <i class="fas fa-heartbeat text-white text-3xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-slate-800 tracking-tight">CareSync Portal</h1>
+        <p class="text-slate-500 mt-2 font-medium">NCD Management & Senior Care</p>
+      </div>
+
+      <div class="bg-white/95 backdrop-blur-md rounded-3xl p-8 space-y-6 shadow-2xl border border-white/20">
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Access Level</label>
+          <select class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-700 input-focus transition-all"
+                  [(ngModel)]="selectedRole"
+                  name="selectedRole">
+            <option value="sw">Social Worker</option>
+            <option value="nurse">Nurse</option>
+            <option value="doctor">Doctor</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="lab">Lab Technician</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <form class="space-y-5" (ngSubmit)="handleLogin()">
+          <div>
+            <label class="text-sm font-semibold text-slate-700 block mb-2">Staff ID</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3.5 text-slate-400"><i class="fas fa-id-badge"></i></span>
+              <input type="text" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl input-focus transition-all text-slate-800"
+                     [(ngModel)]="staffId" name="staffId" required>
+            </div>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-slate-700 block mb-2">Password</label>
+            <div class="relative">
+              <span class="absolute left-4 top-3.5 text-slate-400"><i class="fas fa-lock"></i></span>
+              <input type="password" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl input-focus transition-all text-slate-800"
+                     [(ngModel)]="password" name="password" required>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center"
+                  [disabled]="loggingIn">
+            <ng-container *ngIf="!loggingIn; else loadingLogin">
+              <span>Secure Access</span>
+              <i class="fas fa-arrow-right ml-2 text-sm"></i>
+            </ng-container>
+          </button>
+          <ng-template #loadingLogin>
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span class="ml-2">Initializing...</span>
+          </ng-template>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="min-h-screen bg-slate-50" [class.hidden]="!loggedIn">
+    <div id="tab-home" class="tab-content pb-24" [class.active]="activeTab === 'home'">
+      <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+        <div class="flex justify-between items-center mb-4">
+          <div class="w-10 h-10 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" alt="Profile">
+            </div>
+          <div>
+            <p class="text-xs font-bold text-blue-600 uppercase tracking-widest">{{ dashboardTitle }}</p>
+            <h2 class="text-xl font-bold text-slate-800">{{ greeting }}</h2>
+          </div>
+          <div class="flex items-center space-x-3">
+            <div class="relative">
+              <i class="fas fa-bell text-slate-400 text-xl"></i>
+              <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-white font-bold">2</span>
+            </div>
+            <button type="button" (click)="logout()" class="text-xs font-bold text-slate-500 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition-colors">
+             <i class="fas fa-sign-out"></i>
+            </button>
+            
+          </div>
+        </div>
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
+          <input type="text" [placeholder]="isClinicalRole ? 'Search Patient Name or MRN...' : 'Search Patient Name or ID...'"
+                 class="w-full bg-slate-100 border-none rounded-2xl py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+        </div>
+      </header>
+
+      <div *ngIf="selectedRole === 'sw'" class="role-home">
+        <div class="grid grid-cols-2 gap-4 p-6">
+          <div class="bg-blue-600 rounded-3xl p-4 text-white shadow-lg shadow-blue-200">
+            <p class="text-[10px] font-bold opacity-80 uppercase tracking-wider">Assigned Visits</p>
+            <h3 class="text-2xl font-bold mt-1">12</h3>
+          </div>
+          <div class="bg-white rounded-3xl p-4 border border-slate-200">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Visits Today</p>
+            <h3 class="text-2xl font-bold text-slate-800 mt-1">04</h3>
+          </div>
+        </div>
+
+        <div class="px-6 mb-4"><h3 class="font-bold text-slate-800">Scheduled Visits</h3></div>
+
+        <div class="px-6 space-y-4">
+          <div (click)="openPatient('John Doe', 'Hypertension', '68', 'Male', '8821', '2023-10-20', 'Dr. Karl John', 'Julie')"
+               class="ncd-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer">
+            <h4 class="font-bold text-slate-800 text-lg">John Doe</h4>
+            <p class="text-xs text-slate-500 mt-1">68Y • Male • ID: 8821</p>
+          </div>
+          <div (click)="openPatient('Robert Smith', 'Diabetes', '72', 'Male', '9022', '2023-10-15', 'Dr. Karl John', 'Julie')"
+               class="ncd-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm cursor-pointer">
+            <h4 class="font-bold text-slate-800 text-lg">Robert Smith</h4>
+            <p class="text-xs text-slate-500 mt-1">72Y • Male • ID: 9022</p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="isClinicalRole" class="p-6 space-y-6">
+        <h3 class="text-xl font-bold text-slate-800">Critical Alerts</h3>
+        <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
+          <div class="bg-white border border-rose-100 rounded-3xl p-3 shadow-sm">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-[10px] font-bold bg-rose-100 text-rose-600 px-2 py-1 rounded-full uppercase">SOS</span>
+              <span class="text-xs text-slate-400">2m ago</span>
+            </div>
+            <h4 class="text-[17px] font-bold text-slate-800">Robert Chen</h4>
+            <p class="text-[13px] text-red-500 font-semibold mt-1">High BP Alert: 182/110 mmHg</p>
+            <p class="text-xs text-slate-500">Remote Service Worker: Sarah M.</p>
+          </div>
+          <div class="bg-white border border-amber-100 rounded-3xl p-5 shadow-sm">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-1 rounded-full uppercase">Review</span>
+              <span class="text-xs text-slate-400">15m ago</span>
+            </div>
+            <h4 class="text-[17px] font-bold text-slate-800">Maria Garcia</h4>
+            <p class="text-[13px] text-orange-600 font-semibold mt-1">Lab Result: HbA1c 9.2%</p>
+            <p class="text-xs text-slate-500">Uncontrolled Diabetic Flow</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-blue-600 text-white rounded-2xl p-4"><p class="text-[10px] uppercase opacity-80 font-bold">Patient Visited</p><h4 class="text-2xl font-bold mt-1">29</h4></div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4"><p class="text-[10px] uppercase text-slate-400 font-bold">Live Waiting</p><h4 class="text-2xl font-bold text-slate-800 mt-1">{{ liveWaitingCount }}</h4></div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-4"><p class="text-[10px] uppercase text-slate-400 font-bold">Virtual Waiting</p><h4 class="text-2xl font-bold text-slate-800 mt-1">7</h4></div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-bold text-slate-800 mb-4">Active Care Plans</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm cursor-pointer"
+                 (click)="openCarePlanByName('Hypertension Care','dashboard')">
+              <h4 class="text-sm font-bold text-slate-900">Hypertension Care</h4>
+              <p class="text-xs text-slate-400 mt-1">2 Patients Enrolled</p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-bold">NCD SUPPORT</span>
+                <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[9px] font-bold">CHRONIC</span>
+              </div>
+            </div>
+            <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm cursor-pointer"
+                 (click)="openCarePlanByName('Diabetes Wellness','dashboard')">
+              <h4 class="text-sm font-bold text-slate-900">Diabetes Wellness</h4>
+              <p class="text-xs text-slate-400 mt-1">2 Patients Enrolled</p>
+              <div class="flex flex-wrap gap-2 mt-3">
+                <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-bold">NCD SUPPORT</span>
+                <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[9px] font-bold">CHRONIC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-cases" class="tab-content pb-24" [class.active]="activeTab === 'cases'">
+      <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+        <h2 class="text-xl font-bold text-slate-800">Visits</h2>
+      </header>
+      <div class="px-5 pt-4 pb-3 space-y-2">
+        <div class="bg-white p-3 rounded-3xl border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between">
+            <button type="button" (click)="changeVisitWeek(-1)" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="text-sm font-semibold text-slate-700">{{ visitMonthLabel }}</div>
+            <button type="button" (click)="changeVisitWeek(1)" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="mt-3 grid grid-cols-7 text-center text-[10px] text-slate-400 font-bold">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+          <div class="mt-2 grid grid-cols-7 text-center">
+            <button *ngFor="let d of visitWeekDays"
+                    type="button"
+                    (click)="selectVisitDay(d)"
+                    class="mx-auto w-9 h-9 rounded-full text-sm font-semibold"
+                    [class.bg-blue-600]="isVisitSelectedDay(d)"
+                    [class.text-white]="isVisitSelectedDay(d)"
+                    [class.text-slate-700]="!isVisitSelectedDay(d)">
+              {{ d.getDate() }}
+            </button>
+          </div>
+        </div>
+        <!-- <div class="bg-white px-4 py-2 rounded-3xl border border-slate-100 shadow-sm">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Visits</p>
+        </div> -->
+        <div *ngIf="selectedRole === 'doctor'; else otherVisits">
+          <div class="flex space-x-2 mb-4">
+            <button type="button" (click)="setDoctorVisitView('my')"
+                    class="text-[10px] font-bold uppercase px-4 py-2 rounded-full"
+                    [class.bg-blue-600]="doctorVisitView === 'my'" [class.text-white]="doctorVisitView === 'my'"
+                    [class.bg-slate-100]="doctorVisitView !== 'my'" [class.text-slate-500]="doctorVisitView !== 'my'">
+              My
+            </button>
+            <button type="button" (click)="setDoctorVisitView('all')"
+                    class="text-[10px] font-bold uppercase px-4 py-2 rounded-full"
+                    [class.bg-blue-600]="doctorVisitView === 'all'" [class.text-white]="doctorVisitView === 'all'"
+                    [class.bg-slate-100]="doctorVisitView !== 'all'" [class.text-slate-500]="doctorVisitView !== 'all'">
+              All
+            </button>
+          </div>
+
+          <div *ngIf="(doctorVisitView === 'my' ? filteredMyDoctorVisits.length : filteredAllDoctorVisits.length) === 0"
+               class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm text-sm text-slate-500">
+            No visits yet.
+          </div>
+
+          <div *ngFor="let visit of (doctorVisitView === 'my' ? filteredMyDoctorVisits : filteredAllDoctorVisits); let i = index"
+               (click)="openVisit(visit)"
+               class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm cursor-pointer">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-bold text-slate-800">{{ visit.name }}</h4>
+                <p class="text-xs text-slate-500">{{ visit.age }}Y • {{ visit.gender }} • {{ visit.mode }}</p>
+                <p class="text-xs text-slate-400">Doctor: {{ visit.assignedDoctor }}</p>
+                <p class="text-xs text-slate-400">Queue #{{ i + 1 }} • ~{{ i * 10 }}m wait</p>
+              </div>
+              <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-full uppercase">
+                {{ visit.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #otherVisits>
+          <div *ngIf="filteredVisits.length === 0"
+               class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm text-sm text-slate-500">
+            No visits yet.
+          </div>
+          <div *ngFor="let visit of filteredVisits; let i = index" (click)="openVisit(visit)" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm cursor-pointer">
+            <div class="flex justify-between items-start">
+              <div>
+                <h4 class="font-bold text-slate-800">{{ visit.name }}</h4>
+                <p class="text-xs text-slate-500">{{ visit.age }}Y • {{ visit.gender }} • {{ visit.mode }}</p>
+                <p class="text-xs text-slate-400">Doctor: {{ visit.assignedDoctor }}</p>
+                <p class="text-xs text-slate-400">Queue #{{ i + 1 }} • ~{{ i * 10 }}m wait</p>
+              </div>
+              <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-full uppercase">
+                {{ visit.status }}
+              </span>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+    <div id="tab-route" class="tab-content pb-24" [class.active]="activeTab === 'route'">
+      <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+        <div class="flex justify-between items-center">
+          <h2 id="route-tab-title" class="text-xl font-bold text-slate-800">{{ routeTitle }}</h2>
+          <span id="route-tab-action" class="text-xs font-bold text-blue-600">
+            <i [class]="isClinicalRole ? 'fas fa-users mr-1' : 'fas fa-directions mr-1'"></i>
+            {{ isClinicalRole ? 'View All' : 'Start Nav' }}
+          </span>
+        </div>
+        <div id="route-summary" class="mt-4 bg-slate-50 p-3 rounded-2xl flex items-center space-x-3" [class.hidden]="isClinicalRole">
+          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+            <i class="fas fa-car"></i>
+          </div>
+          <p class="text-xs font-medium text-slate-600">4 Stops • 18 mi • Est. 45m driving</p>
+        </div>
+      </header>
+
+      <div id="route-content-sw" class="p-6 relative role-route" [class.hidden]="isClinicalRole">
+        <div class="absolute left-10 top-10 bottom-10 w-0.5 bg-blue-100 z-0"></div>
+        <div class="space-y-8">
+          <div class="flex items-start space-x-6 relative z-10">
+            <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold shadow-lg">1</div>
+            <div class="flex-1 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+              <div class="flex justify-between"><h4 class="font-bold text-slate-800">John Doe</h4><span class="text-[10px] text-slate-400">09:30 AM</span></div>
+              <p class="text-xs text-slate-500 mt-1">123 West Adams St, Apt 4B</p>
+              <span class="mt-2 inline-block text-[9px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase">Arrived</span>
+            </div>
+          </div>
+          <div class="flex items-start space-x-6 relative z-10">
+            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-lg">2</div>
+            <div class="flex-1 bg-white p-4 rounded-3xl border-2 border-blue-600 shadow-md">
+              <div class="flex justify-between"><h4 class="font-bold text-slate-800">Robert Smith</h4><span class="text-[10px] text-blue-600">Active</span></div>
+              <p class="text-xs text-slate-500 mt-1">455 S Broadway Blvd</p>
+              <button class="mt-3 w-full bg-blue-600 text-white text-[10px] font-bold py-2 rounded-xl">Check In Now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="route-content-clinical" class="p-6 space-y-4 role-route" [class.hidden]="!isClinicalRole">
+        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+          <div class="flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-slate-800">Robert Chen</h4>
+              <p class="text-xs text-slate-500">Room 205 • Critical Review</p>
+            </div>
+            <span class="text-[10px] font-bold bg-red-50 text-red-600 px-2 py-1 rounded-full">Priority</span>
+          </div>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+          <div class="flex justify-between items-center">
+            <div>
+              <h4 class="font-bold text-slate-800">Maria Garcia</h4>
+              <p class="text-xs text-slate-500">Ward B • Follow-up</p>
+            </div>
+            <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-full">Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-patients" class="tab-content pb-24" [class.active]="activeTab === 'patients'">
+      <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+        <h2 class="text-xl font-bold text-slate-800">Directory</h2>
+      </header>
+      <div class="px-4 pb-6 space-y-6" *ngIf="viewMode() === 'list'">
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <input type="text" [value]="patientSearch()" (input)="patientSearch.set($any($event.target).value)"
+                 placeholder="Search by Name or MRN..."
+                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        @for (p of filteredPatients(); track p.id) {
+          <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-3 flex items-center gap-4 cursor-pointer" 
+                style="margin-bottom: 5px;"
+               (click)="openPatientDetails(p)">
+            <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+              {{ p.initials }}
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-800">{{ p.name }}</h4>
+              <p class="text-xs text-slate-500">{{ p.age }}Y • {{ p.gender }} • ID: {{ p.id }}</p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="fixed inset-0 z-[200] bg-slate-50 overflow-y-auto animate-slideup" *ngIf="viewMode() === 'profile' && selectedPatient() as p">
+        <header class="bg-white/80 backdrop-blur-md sticky top-0 px-6 pt-12 pb-4 border-b border-slate-100 flex justify-between items-center z-50">
+          <button (click)="closePatientDetails()" class="text-blue-600 font-bold flex items-center gap-2">
+            <i class="fas fa-chevron-left"></i> Back
+          </button>
+          <h3 class="font-bold text-lg">Patient Profile</h3>
+          <div class="w-10"></div>
+        </header>
+
+        <div class="px-6 py-8 space-y-6 pb-32">
+          <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 flex flex-col items-center text-center">
+            <div class="w-24 h-24 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-bold mb-4 shadow-xl shadow-blue-100">
+              {{ p.initials }}
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900">{{ p.name }}</h2>
+            <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">
+              {{ p.age }} • {{ p.gender }} • MRN: {{ p.id }}
+            </p>
+            <div class="flex gap-3 mt-6">
+              <a href="tel:{{p.phone}}" class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-blue-600"><i class="fas fa-phone"></i></a>
+              <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-blue-600"><i class="fas fa-comment"></i></div>
+              <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-blue-600"><i class="fas fa-map-marker-alt"></i></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-5 rounded-3xl border border-slate-100">
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assigned Doctor</p>
+              <p class="text-sm font-bold text-slate-700">{{ p.doctorName }}</p>
+            </div>
+            <div class="bg-white p-5 rounded-3xl border border-slate-100">
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Primary Condition</p>
+              <p class="text-sm font-bold text-slate-700">{{ p.condition }}</p>
+            </div>
+          </div>
+
+          <section>
+            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Recent Triage ({{ p.triage?.date }})</h4>
+            <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
+              <div class="grid grid-cols-3 gap-6">
+                <div class="text-center">
+                  <p class="text-[9px] font-bold text-slate-400 uppercase">BP</p>
+                  <p class="text-base font-bold text-red-600">{{ p.triage?.bp }}</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-[9px] font-bold text-slate-400 uppercase">Glucose</p>
+                  <p class="text-base font-bold text-slate-700">{{ p.triage?.glucose }}</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-[9px] font-bold text-slate-400 uppercase">Temp</p>
+                  <p class="text-base font-bold text-slate-700">{{ p.triage?.temp }}°</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Medical Records</h4>
+            <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 space-y-4">
+              <div>
+                <p class="text-[9px] font-bold text-slate-400 uppercase mb-2">Active Medications</p>
+                <div class="flex flex-wrap gap-2">
+                  @for (med of p.meds; track med) {
+                    <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-bold">{{ med }}</span>
+                  }
+                </div>
+              </div>
+              <div class="pt-4 border-t border-slate-50">
+                <p class="text-[9px] font-bold text-slate-400 uppercase mb-2">Comorbidities</p>
+                <p class="text-sm font-semibold text-slate-700">{{ p.history?.join(', ') }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Recent Visits</h4>
+            <div class="space-y-3">
+              @for (visit of p.lastVisits; track visit.date) {
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 flex justify-between items-center">
+                  <div>
+                    <p class="text-sm font-bold text-slate-800">{{ visit.reason }}</p>
+                    <p class="text-[10px] text-slate-400 font-medium">{{ visit.date }} • {{ visit.doctor }}</p>
+                  </div>
+                  <i class="fas fa-chevron-right text-slate-200 text-xs"></i>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section>
+            <div class="flex justify-between items-center mb-4 px-1">
+              <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest">Active Care Plan</h4>
+              <button class="text-[10px] font-bold text-blue-600 uppercase">Manage</button>
+            </div>
+            <div class="space-y-3">
+              @for (item of p.carePlan; track item.title) {
+                <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm cursor-pointer"
+                     (click)="openCarePlanByName(item.title,'patient-profile')">
+                  <h4 class="text-sm font-bold text-slate-900">{{ item.title }}</h4>
+                  <p class="text-xs text-slate-400 mt-1">{{ item.enrolled }}</p>
+                  <div class="flex flex-wrap gap-2 mt-3">
+                    @for (tag of item.tags; track tag) {
+                      <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-bold">{{ tag }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div id="tab-schedule" class="tab-content pb-24" [class.active]="activeTab === 'schedule'">
+      <header class="bg-white px-6  pb-6 shadow-sm sticky top-0 z-10" style="padding-top: 40px;">
+        <h2 class="text-xl font-bold text-slate-800">{{ scheduleLabel }}</h2>
+      </header>
+      <div class="bg-white p-3  border border-slate-100 shadow-sm">
+          <div class="flex items-center justify-between">
+            <button type="button" (click)="changeScheduleWeek(-1)" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="text-sm font-semibold text-slate-700">{{ scheduleMonthLabel }}</div>
+            <button type="button" (click)="changeScheduleWeek(1)" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="mt-3 grid grid-cols-7 text-center text-[10px] text-slate-400 font-bold">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+          <div class="mt-2 grid grid-cols-7 text-center">
+            <button *ngFor="let d of scheduleWeekDays"
+                    type="button"
+                    (click)="selectScheduleDay(d)"
+                    class="mx-auto w-9 h-9 rounded-full text-sm font-semibold"
+                    [class.bg-blue-600]="isSelectedDay(d)"
+                    [class.text-white]="isSelectedDay(d)"
+                    [class.text-slate-700]="!isSelectedDay(d)">
+              {{ d.getDate() }}
+            </button>
+          </div>
+      </div>
+      <div class="px-5 pt-4 pb-3 space-y-2">
+        
+        <!-- <div class="bg-white px-4 py-2 rounded-3xl border border-slate-100 shadow-sm">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Appointments</p>
+        </div> -->
+        <div class="bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm" *ngFor="let appt of filteredAppointments">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="font-bold text-slate-800">{{ appt.name }}</h4>
+              <p class="text-xs text-slate-500">{{ appt.age }}Y • {{ appt.gender }} • ID: {{ appt.id }}</p>
+              <p class="text-xs text-slate-400">{{ appt.time }}</p>
+            </div>
+            <button type="button" (click)="checkIn(appt)" class="bg-blue-600 text-white text-xs font-bold py-2 px-4 rounded-xl">
+              Check In
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-setting" class="tab-content pb-24" [class.active]="activeTab === 'setting'">
+      <header class="bg-white px-6 pt-12 pb-6 shadow-sm sticky top-0 z-10">
+        <h2 class="text-xl font-bold text-slate-800">Settings</h2>
+      </header>
+      <div class="space-y-3">
+        <div class="bg-white rounded-2xl border border-slate-100 divide-y">
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-lock"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Change Password</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-shield-alt"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Two Factor Verification</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-trash"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Delete Account</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-bell"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Notifications</span>
+            </div>
+            <div class="w-11 h-6 bg-slate-200 rounded-full relative">
+              <div class="w-5 h-5 bg-blue-600 rounded-full absolute right-0.5 top-0.5"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-credit-card"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Payment Methods</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-universal-access"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Accessibility</span>
+            </div>
+            <i class="fas fa-chevron-down text-slate-400"></i>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-clipboard-list"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Subscription Management</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+              <span class="w-9 h-9 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></span>
+              <span class="text-sm font-semibold text-slate-800">Logout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fixed right-6 bottom-24 z-20">
+      <div class="mb-3 space-y-2" style="display: grid;" [class.hidden]="!fabMenuOpen">
+        <button type="button" (click)="openQuickAction()" class="w-40 bg-white text-slate-700 border border-slate-200 text-sm font-semibold py-2 px-3 rounded-xl shadow-md text-left">
+          Add Patient
+        </button>
+        <button type="button" (click)="openQuickAction()" class="w-40 bg-white text-slate-700 border border-slate-200 text-sm font-semibold py-2 px-3 rounded-xl shadow-md text-left">
+          Add Visit
+        </button>
+        <button type="button" (click)="openQuickAction()" class="w-40 bg-white text-slate-700 border border-slate-200 text-sm font-semibold py-2 px-3 rounded-xl shadow-md text-left">
+          Appointment
+        </button>
+      </div>
+
+      <button type="button" (click)="toggleFabMenu()" class="closeadd-btn w-14 h-14 bg-blue-600 rounded-2xl text-white shadow-xl shadow-blue-300 flex items-center justify-center">
+        <i [class]="fabMenuOpen ? 'fas fa-times text-xl' : 'fas fa-plus text-xl'"></i>
+      </button>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 glass-nav h-20 px-8 flex items-center justify-between z-10 safe-area-bottom">
+      <button (click)="switchTab('home')" class="nav-btn flex flex-col items-center" [class.text-blue-600]="activeTab === 'home'" [class.text-slate-400]="activeTab !== 'home'">
+        <i class="fas fa-home text-lg"></i><span class="text-[10px] font-bold mt-1">Home</span>
+      </button>
+      <button (click)="switchTab('schedule')" class="nav-btn flex flex-col items-center" [class.text-blue-600]="activeTab === 'schedule'" [class.text-slate-400]="activeTab !== 'schedule'">
+        <i [class]="isClinicalRole ? 'fas fa-calendar-alt text-lg' : 'fas fa-cog text-lg'"></i><span class="text-[10px] font-bold mt-1">{{ scheduleLabel }}</span>
+      </button>
+      <button (click)="switchTab('cases')" class="nav-btn flex flex-col items-center" [class.text-blue-600]="activeTab === 'cases'" [class.text-slate-400]="activeTab !== 'cases'">
+        <i class="fas fa-folder-open text-lg"></i><span class="text-[10px] font-bold mt-1">Visits</span>
+      </button>
+      <button (click)="switchTab('route')" class="nav-btn flex flex-col items-center" [class.text-blue-600]="activeTab === 'route'" [class.text-slate-400]="activeTab !== 'route'">
+        <i [class]="isClinicalRole ? 'fas fa-users text-lg' : 'fas fa-map-marker-alt text-lg'"></i><span class="text-[10px] font-bold mt-1">{{ routeLabel }}</span>
+      </button>
+      <button (click)="switchTab('patients')" class="nav-btn flex flex-col items-center" [class.text-blue-600]="activeTab === 'patients'" [class.text-slate-400]="activeTab !== 'patients'">
+        <i class="fas fa-user-injured text-lg"></i><span class="text-[10px] font-bold mt-1">Patients</span>
+      </button>
+       <button (click)="switchTab('setting')" class="nav-btn flex flex-col items-center" [class.text-blue-600]="activeTab === 'setting'" [class.text-slate-400]="activeTab !== 'setting'">
+        <i class="fas fa-cog text-lg"></i><span class="text-[10px] font-bold mt-1">Settings</span>
+      </button>
+     
+    </nav>
+  </div>
+
+  <div class="fixed inset-0 z-50 bg-white overflow-y-auto" [class.hidden]="!formOpen">
+     <div id="screen-form" class="fixed inset-0 z-50 bg-white overflow-y-auto">
+        <header class="bg-white border-b sticky top-0 p-4 flex items-center justify-between">
+            <button (click)="closeForm()" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            <h3 class="font-bold text-slate-800">Clinical Field Encounter</h3>
+            <div class="w-10"></div>
+        </header>
+        <div class="patientSearch" style="    padding: 10px 20px;">
+            <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Select patient</label>
+            <input list="patient-list" [(ngModel)]="selectedVisitPatient" name="selectedVisitPatient"
+                   placeholder="Search patient..."
+                   class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <datalist id="patient-list">
+                <option *ngFor="let p of patientSearchOptions" [value]="p"></option>
+            </datalist>
+        </div>
+        <div class="patientVist p-6 pb-40 space-y-6" [class.hidden]="!showPatientVisit">
+
+            <!-- Patient Quick Info -->
+            <!-- <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 id="form-patient-name" class="font-bold text-slate-800">New Adhoc Case</h4>
+                        <div id="form-patient-details" class="text-[10px] text-slate-400 font-medium flex space-x-2 mt-1 uppercase tracking-wider">
+                            <span>Pending Assignment</span>
+                        </div>
+                    </div>
+                </div>
+            </div> -->
+
+            <div class="space-y-4">
+                
+                
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Type of Visit</label>
+                    <select id="visit-type" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
+                        <option value="routine">Routine Follow-up</option>
+                        <option value="adhoc">Adhoc Emergency Visit</option>
+                        <option value="screening">Screening</option>
+                        <option value="medication">Medication Adjustment</option>
+                    </select>
+                </div>
+
+                <h2 class="text-sm font-bold text-slate-800 uppercase tracking-widest pt-2 flex items-center">
+                    <i class="fas fa-vials mr-2 text-blue-600"></i> Clinical Vitals
+                </h2>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">BP (mmHg)</label>
+                        <input type="text" id="vital-bp" placeholder="120/80" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Glucose (mg/dL)</label>
+                        <input type="number" id="vital-glucose" placeholder="95" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Heart Rate (bpm)</label>
+                        <input type="number" id="vital-hr" placeholder="72" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Temperature (°F)</label>
+                        <input type="text" id="vital-temp" placeholder="98.6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Pulse Ox (%)</label>
+                        <input type="number" id="vital-pulse" placeholder="98" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Weight (kg)</label>
+                        <input type="text" id="vital-weight" placeholder="70.5" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Medicine Continuation</label>
+                    <select class="w-full bg-white border-2 border-slate-800 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option>Continue Current Medications</option>
+                        <option>Discontinue All</option>
+                        <option>Update Dosage</option>
+                        <option>Add New Prescription</option>
+                    </select>
+                </div>
+
+                <div *ngIf="selectedRole === 'doctor'" class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Medicines</label>
+                        <textarea [(ngModel)]="doctorMedicines" name="doctorMedicines"
+                                  placeholder="Add medicines..."
+                                  class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Lab / Radiology Tests</label>
+                        <select multiple [(ngModel)]="selectedLabTests" name="selectedLabTests"
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option *ngFor="let t of labTestOptions" [value]="t">{{ t }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Doctor Notes</label>
+                        <textarea [(ngModel)]="doctorNotes" name="doctorNotes"
+                                  placeholder="Add notes..."
+                                  class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Follow-up (days)</label>
+                        <input type="number" min="1" [(ngModel)]="doctorFollowUpDays" name="doctorFollowUpDays"
+                               placeholder="e.g., 14"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 mb-2 block uppercase">Attachments (Photos)</label>
+                    <div class="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center bg-slate-50 cursor-pointer hover:border-blue-400 transition-colors">
+                        <i class="fas fa-camera text-slate-400 text-3xl mb-2"></i>
+                        <span class="text-sm font-semibold text-slate-600">Tap to add photos</span>
+                        <span class="text-[10px] text-slate-400">Max 5MB per file</span>
+                    </div>
+                    <div class="flex space-x-3 mt-4">
+                        <div class="relative w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold border">
+                            Img1
+                            <button class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div class="relative w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold border">
+                            Img2
+                            <button class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px]"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Assigned Section -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mt-4">
+                    <p class="text-[11px] font-bold text-slate-800 mb-3">Auto-Assigned (from previous visit)</p>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold">Nurse</p>
+                                <p id="form-nurse-name" class="text-sm font-semibold text-slate-700">Julie Anderson</p>
+                            </div>
+                            <button class="text-[10px] font-bold border border-teal-500 text-teal-600 px-3 py-1 rounded-lg">Change</button>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-[9px] text-slate-400 uppercase font-bold">Doctor</p>
+                                <p id="form-doctor-name" class="text-sm font-semibold text-slate-700">Dr. Karl John</p>
+                            </div>
+                            <button class="text-[10px] font-bold border border-teal-500 text-teal-600 px-3 py-1 rounded-lg">Change</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Field Observations</label>
+                    <textarea id="visit-notes" placeholder="Note symptoms, compliance, or mobility issues..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm h-32 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-0 left-0 right-0 p-6 bg-white border-t safe-area-bottom" style="position: sticky;">
+            <button (click)="submitCase()" id="submitBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-[0.98]">
+                Submit Encounter Report
+            </button>
+        </div>
+    </div>
+  </div>
+
+  <!-- CARE PLAN DETAIL MODAL -->
+  @if (carePlanView() !== 'none' && activePlan(); as plan) {
+    <div class="fixed inset-0 z-[300] bg-slate-50 overflow-y-auto animate-slideup">
+      <header class="bg-white sticky top-0 px-6 pt-12 pb-4 border-b border-slate-100 flex justify-between items-center z-50">
+        <button (click)="closeCarePlan()" class="text-blue-600 font-bold flex items-center gap-2">
+          <i class="fas fa-chevron-left"></i> Back
+        </button>
+        <h3 class="font-bold text-lg">Program Details</h3>
+        <div class="w-10"></div>
+      </header>
+
+      <div class="px-6 py-8 space-y-8 pb-32">
+        <div class="bg-blue-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+          <div class="relative z-10">
+            <h2 class="text-3xl font-bold mb-2">{{ plan.name }}</h2>
+            <p class="text-blue-100 text-sm leading-relaxed opacity-90">{{ plan.description }}</p>
+          </div>
+          <i class="fas fa-heartbeat absolute -bottom-4 -right-4 text-white/10 text-9xl"></i>
+        </div>
+
+        <section>
+          <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Assigned Care Team</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-3">
+              <img [src]="plan.defaultDoctor.avatar" class="w-10 h-10 rounded-xl bg-slate-100" />
+              <div>
+                <p class="text-[9px] font-bold text-slate-400 uppercase">Doctor</p>
+                <p class="text-sm font-bold text-slate-700">{{ plan.defaultDoctor.name }}</p>
+              </div>
+            </div>
+            <div class="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-3">
+              <img [src]="plan.defaultNurse.avatar" class="w-10 h-10 rounded-xl bg-slate-100" />
+              <div>
+                <p class="text-[9px] font-bold text-slate-400 uppercase">Nurse</p>
+                <p class="text-sm font-bold text-slate-700">{{ plan.defaultNurse.name }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="flex justify-between items-center mb-4 px-1">
+            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest">Enrolled Patients</h4>
+            <span class="bg-slate-200 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-md">
+              {{ getPatientsInPlan(plan.id).length }}
+            </span>
+          </div>
+          <div class="space-y-3">
+            @for (p of getPatientsInPlan(plan.id); track p.id) {
+              <div (click)="viewPatientDetail(p)" class="bg-white p-4 rounded-3xl border border-slate-100 flex items-center gap-4 active:bg-slate-50 transition-colors">
+                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold">
+                  {{ p.initials }}
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-bold text-slate-800">{{ p.name }}</p>
+                  <p class="text-[10px] text-slate-400">ID: {{ p.id }} • {{ p.age }} {{ p.gender }}</p>
+                </div>
+                <i class="fas fa-chevron-right text-slate-200 text-xs"></i>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section>
+          <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Standard Interventions</h4>
+          <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 space-y-6">
+            @for (task of plan.tasks; track task.id) {
+              <div class="flex items-start gap-4">
+                <div class="mt-1 w-2 h-2 rounded-full bg-blue-500"></div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">{{ task.description }}</p>
+                  <p class="text-[10px] text-slate-400">{{ task.frequency }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,70 @@
+.sw-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+h2 {
+  margin: 2px 0 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stats article {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.stats span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stats strong {
+  font-size: 20px;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.card.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card p {
+  margin: 6px 0 4px;
+  font-size: 13px;
+}
+
+.card small {
+  color: var(--muted);
+}
